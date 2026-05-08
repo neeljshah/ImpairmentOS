@@ -8,12 +8,14 @@ import { ImpairmentPacket } from "./components/ImpairmentPacket";
 import { ExportModal } from "./components/ExportModal";
 import { RecordsExport } from "./components/RecordsExport";
 import { PropertyOverview } from "./components/PropertyOverview";
+import { DeficiencyTracker } from "./components/DeficiencyTracker";
 import { Walkthrough } from "./components/Walkthrough";
 import "./index.css";
 
 type View =
   | { type: "dashboard"; filterPropertyId?: number }
   | { type: "properties" }
+  | { type: "deficiencies" }
   | { type: "walkthrough" }
   | { type: "new_impairment" }
   | { type: "take_action"; impairment: Impairment }
@@ -27,16 +29,41 @@ export default function App() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportPrefillPropertyId, setExportPrefillPropertyId] = useState<number | undefined>(undefined);
   const [cedarImpairment, setCedarImpairment] = useState<Impairment | null>(null);
+  const [activeCount, setActiveCount] = useState(0);
+  const [alertCount, setAlertCount] = useState(0);
 
-  // Load Cedar Heights broken impairment for walkthrough
+  // Load Cedar Heights broken impairment for walkthrough + update tab title
   useEffect(() => {
     api.getDashboard().then(data => {
       const cedar = data.active_impairments.find(i =>
         i.system.property.name.includes("Cedar Heights") && i.status === "repair_in_progress"
       );
       if (cedar) setCedarImpairment(cedar);
+      setActiveCount(data.active_impairments.length);
+      setAlertCount(data.compliance_alerts.length);
     }).catch(() => {});
   }, [dashboardKey]);
+
+  useEffect(() => {
+    const parts: string[] = [];
+    if (alertCount > 0) parts.push(`${alertCount} alerts`);
+    if (activeCount > 0) parts.push(`${activeCount} active`);
+    document.title = parts.length > 0
+      ? `(${parts.join(", ")}) ImpairmentOS`
+      : "ImpairmentOS";
+  }, [activeCount, alertCount]);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      if (e.altKey && e.key === "d") { e.preventDefault(); setView({ type: "dashboard" }); }
+      if (e.altKey && e.key === "p") { e.preventDefault(); setView({ type: "properties" }); }
+      if (e.altKey && e.key === "f") { e.preventDefault(); setView({ type: "deficiencies" }); }
+      if (e.altKey && e.key === "n") { e.preventDefault(); setView({ type: "new_impairment" }); }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
 
   function refreshDashboard() {
     setDashboardKey(k => k + 1);
@@ -60,11 +87,13 @@ export default function App() {
 
   const navBar = (activeView?: string) => (
     <NavBar
-      onNewImpairment={["dashboard", "properties"].includes(activeView || "") ? () => setView({ type: "new_impairment" }) : undefined}
-      onExportRecords={["dashboard", "properties"].includes(activeView || "") ? () => openExportModal() : undefined}
+      onNewImpairment={["dashboard", "properties", "deficiencies"].includes(activeView || "") ? () => setView({ type: "new_impairment" }) : undefined}
+      onExportRecords={["dashboard", "properties", "deficiencies"].includes(activeView || "") ? () => openExportModal() : undefined}
       onViewProperties={() => setView({ type: "properties" })}
+      onViewDeficiencies={() => setView({ type: "deficiencies" })}
       onStartWalkthrough={() => setView({ type: "walkthrough" })}
       onResetDemo={handleResetDemo}
+      onHome={() => { refreshDashboard(); setView({ type: "dashboard" }); }}
       activeView={activeView}
     />
   );
@@ -142,6 +171,27 @@ export default function App() {
           propertyId={view.propertyId}
           startDate={view.startDate}
           endDate={view.endDate}
+          onBack={() => setView({ type: "dashboard" })}
+        />
+      </div>
+    );
+  }
+
+  if (view.type === "deficiencies") {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        {showExportModal && (
+          <ExportModal
+            prefillPropertyId={exportPrefillPropertyId}
+            onClose={() => setShowExportModal(false)}
+            onGenerate={(propertyId, startDate, endDate) => {
+              setShowExportModal(false);
+              setView({ type: "export", propertyId, startDate, endDate });
+            }}
+          />
+        )}
+        {navBar("deficiencies")}
+        <DeficiencyTracker
           onBack={() => setView({ type: "dashboard" })}
         />
       </div>

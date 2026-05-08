@@ -1,12 +1,22 @@
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
 from app.models import Property, Deficiency
 
 router = APIRouter()
+
+VALID_STATUSES = {"open", "proposal_sent", "customer_declined", "repair_scheduled", "resolved"}
+
+class DeficiencyStatusUpdate(BaseModel):
+    status: str
+    resolved_by: Optional[str] = None
+    notes: Optional[str] = None
+    proposal_response: Optional[str] = None
 
 
 def _serialize(d: Deficiency) -> dict:
@@ -50,6 +60,29 @@ def list_property_deficiencies(property_id: int, db: Session = Depends(get_db)):
         .all()
     )
     return [_serialize(d) for d in deficiencies]
+
+
+@router.patch("/deficiencies/{deficiency_id}/status")
+def update_deficiency_status(deficiency_id: int, body: DeficiencyStatusUpdate, db: Session = Depends(get_db)):
+    if body.status not in VALID_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(VALID_STATUSES)}")
+    d = db.query(Deficiency).filter(Deficiency.id == deficiency_id).first()
+    if not d:
+        raise HTTPException(status_code=404, detail="Deficiency not found")
+    d.status = body.status
+    if body.status == "resolved":
+        d.resolved_at = datetime.now()
+        if body.resolved_by:
+            d.resolved_by = body.resolved_by
+    elif body.status == "proposal_sent":
+        d.proposal_sent_at = datetime.now()
+    if body.notes is not None:
+        d.notes = body.notes
+    if body.proposal_response is not None:
+        d.proposal_response = body.proposal_response
+    db.commit()
+    db.refresh(d)
+    return _serialize(d)
 
 
 @router.get("/deficiencies/summary")

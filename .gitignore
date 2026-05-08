@@ -20,3 +20,18 @@ Thumbs.db
 # Env
 .env
 *.env.local
+
+# Claude
+.claude/
+
+# Sensitive source docs
+beacon_packet_full.txt
+unpacked_beacon/
+
+# Planning docs
+Architecture_v2.md
+Data_Migration_Plan.md
+Implementation_Sprints.md
+Project_Plan.md
+SONNET_EXECUTION_PROMPT.md
+Testing_Suite.md

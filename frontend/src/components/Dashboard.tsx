@@ -7,22 +7,28 @@ interface Violation {
   type: "ahj" | "main_drain";
   message: string;
   overdueLabel: string;
+  overdueSeconds: number;
 }
 
 function computeViolations(imp: Impairment): Violation[] {
   const jur = imp.system.property.jurisdiction;
-  const durH = (Date.now() - new Date(imp.opened_at).getTime()) / 3600000;
+  const openedAt = imp.opened_at.endsWith("Z") || imp.opened_at.includes("+") ? imp.opened_at : imp.opened_at + "Z";
+  const durH = (Date.now() - new Date(openedAt).getTime()) / 3600000;
   const violations: Violation[] = [];
 
   if (jur.ahj_notification_required && !imp.ahj_notified && durH > jur.notification_threshold_hours) {
-    const overdueH = durH - jur.notification_threshold_hours;
+    const overdueS = (durH - jur.notification_threshold_hours) * 3600;
+    const overdueH = overdueS / 3600;
     const overdueLabel = overdueH >= 24
-      ? `overdue by ${Math.floor(overdueH / 24)} days`
-      : `overdue by ${Math.round(overdueH)}h`;
+      ? `overdue by ${Math.floor(overdueH / 24)}d ${Math.floor(overdueH % 24)}h`
+      : overdueH >= 1
+        ? `overdue by ${Math.floor(overdueH)}h ${Math.floor((overdueH % 1) * 60)}m`
+        : `overdue by ${Math.floor(overdueH * 60)}m`;
     violations.push({
       type: "ahj",
       message: `AHJ notification required (${jur.local_code_ref || jur.name})`,
       overdueLabel,
+      overdueSeconds: overdueS,
     });
   }
 
@@ -32,10 +38,32 @@ function computeViolations(imp: Impairment): Violation[] {
       type: "main_drain",
       message: "Main drain test required (NFPA 25 §13.2.5, >4h)",
       overdueLabel: "NOT RECORDED",
+      overdueSeconds: 0,
     });
   }
 
   return violations;
+}
+
+function LiveElapsed({ since }: { since: string }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const s2 = since.endsWith("Z") || since.includes("+") ? since : since + "Z";
+  const ms = now - new Date(s2).getTime();
+  const totalSeconds = Math.floor(ms / 1000);
+  const d = Math.floor(totalSeconds / 86400);
+  const h = Math.floor((totalSeconds % 86400) / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const parts: string[] = [];
+  if (d > 0) parts.push(`${d}d`);
+  parts.push(`${h}h`);
+  parts.push(`${String(m).padStart(2, "0")}m`);
+  parts.push(`${String(s).padStart(2, "0")}s`);
+  return <span className="font-mono tabular-nums">{parts.join(" ")}</span>;
 }
 
 interface Props {
@@ -179,10 +207,47 @@ function DashIcon() {
   return <span className="text-slate-400">&#8211;</span>;
 }
 
+function JurisdictionChip({ jur }: { jur: Impairment["system"]["property"]["jurisdiction"] }) {
+  return (
+    <div className="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded px-2 py-0.5 text-xs text-slate-600">
+      <span className="font-mono font-bold">NFPA {jur.nfpa25_edition}</span>
+      <span className="text-slate-400">|</span>
+      <span>{jur.name}</span>
+      {jur.notification_threshold_hours === 0 ? (
+        <span className="text-red-600 font-bold ml-0.5">ALL impairments require AHJ</span>
+      ) : (
+        <span className="text-amber-700 font-semibold ml-0.5">AHJ &gt; {jur.notification_threshold_hours}h</span>
+      )}
+    </div>
+  );
+}
+
 function ActiveCard({ imp, onTakeAction, onViewPacket }: { imp: Impairment; onTakeAction: (i: Impairment) => void; onViewPacket: (id: number) => void }) {
   const jur = imp.system.property.jurisdiction;
   const violations = computeViolations(imp);
   const isBlocked = violations.length > 0;
+  const [showNote, setShowNote] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteConfirm, setNoteConfirm] = useState("");
+
+  async function saveNote() {
+    if (!noteText.trim()) return;
+    setNoteSaving(true);
+    try {
+      let tech = "";
+      try { tech = localStorage.getItem("impairmentos_last_tech") || ""; } catch {}
+      await api.addNote(imp.id, { note: noteText.trim(), performed_by: tech || "Field Tech" });
+      setNoteConfirm("Note saved");
+      setNoteText("");
+      setShowNote(false);
+      setTimeout(() => setNoteConfirm(""), 3000);
+    } catch {
+      setNoteConfirm("Failed to save note");
+    } finally {
+      setNoteSaving(false);
+    }
+  }
 
   const ahjCompliant = jur.ahj_notification_required && imp.ahj_notified && imp.ahj_notified_at;
   const ahjNotifiedMinutes = ahjCompliant && imp.ahj_notified_at
@@ -199,8 +264,15 @@ function ActiveCard({ imp, onTakeAction, onViewPacket }: { imp: Impairment; onTa
               {imp.system.property.name} — {imp.system.zone || systemTypeLabel(imp.system.system_type)}
             </div>
             <div className="text-sm text-slate-600 mt-0.5">{imp.reason}</div>
-            <div className="text-xs text-slate-500 mt-0.5">
-              Opened: {formatDateTime(imp.opened_at)} by {imp.opened_by}
+            <div className="text-xs text-slate-500 mt-1 flex items-center gap-3">
+              <span>Opened: {formatDateTime(imp.opened_at)} by {imp.opened_by}</span>
+              <span className="text-slate-400">|</span>
+              <span className="text-slate-700 font-semibold">
+                Elapsed: <LiveElapsed since={imp.opened_at} />
+              </span>
+            </div>
+            <div className="mt-1.5">
+              <JurisdictionChip jur={jur} />
             </div>
           </div>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(imp.status)}`}>
@@ -210,22 +282,27 @@ function ActiveCard({ imp, onTakeAction, onViewPacket }: { imp: Impairment; onTa
 
         {isBlocked && (
           <div className="mt-3 mb-1">
-            <div className="bg-red-700 text-white px-3 py-1.5 rounded font-bold text-sm inline-block">
-              &#9608;&#9608; BLOCKED: Cannot close — {violations.length} violation{violations.length > 1 ? "s" : ""} &#9608;&#9608;
+            <div className="bg-red-700 text-white px-3 py-1.5 rounded font-bold text-sm inline-flex items-center gap-2">
+              <span>&#9608;&#9608;</span>
+              BLOCKED: Cannot close — {violations.length} violation{violations.length > 1 ? "s" : ""}
+              <span>&#9608;&#9608;</span>
             </div>
-            <ul className="mt-2 space-y-1">
+            <ul className="mt-2 space-y-1.5">
               {violations.map((v, i) => (
-                <li key={i} className="flex items-start gap-1 text-sm text-red-800 font-semibold">
-                  <span className="text-red-600 mt-0.5">&#10007;</span>
-                  <span>
-                    {v.message} — <span className="text-red-600">{v.overdueLabel}</span>{" "}
-                    <button
-                      onClick={() => onTakeAction(imp)}
-                      className="underline text-red-700 hover:text-red-900 font-bold"
-                    >
-                      [Fix →]
-                    </button>
-                  </span>
+                <li key={i} className="flex items-start gap-2 text-sm text-red-800 font-semibold bg-white/60 rounded px-2 py-1.5 border border-red-200">
+                  <span className="text-red-600 mt-0.5 flex-shrink-0">&#10007;</span>
+                  <div className="flex-1">
+                    <div>{v.message}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-red-600 font-mono text-xs">{v.overdueLabel}</span>
+                      <button
+                        onClick={() => onTakeAction(imp)}
+                        className="text-xs underline text-red-700 hover:text-red-900 font-bold"
+                      >
+                        Fix now →
+                      </button>
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -234,34 +311,77 @@ function ActiveCard({ imp, onTakeAction, onViewPacket }: { imp: Impairment; onTa
 
         {!isBlocked && ahjCompliant && ahjNotifiedMinutes !== null && (
           <div className="mt-2 text-sm text-green-700 font-semibold flex items-center gap-1">
-            <CheckIcon /> AHJ notified within {ahjNotifiedMinutes} min — {jur.local_code_ref || "jurisdiction deadline"} ✓
+            <CheckIcon /> AHJ notified within {ahjNotifiedMinutes} min — {jur.local_code_ref || "jurisdiction deadline"}
           </div>
         )}
 
         <ComplianceStatusRow imp={imp} />
 
-        <div className="flex gap-2 mt-3 flex-wrap">
-          {!imp.ahj_notified && jur.ahj_notification_required && (
-            <button
-              onClick={() => onTakeAction(imp)}
-              className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold transition-colors"
-            >
-              Notify AHJ
-            </button>
-          )}
+        {(() => {
+          const nextAction = (() => {
+            if (!imp.ahj_notified && jur.ahj_notification_required)
+              return { label: "Notify AHJ →", cls: "bg-red-600 text-white hover:bg-red-700" };
+            if (!imp.fire_watch_started_at)
+              return { label: "Start Fire Watch →", cls: "bg-amber-600 text-white hover:bg-amber-700" };
+            if (!imp.restored_at)
+              return { label: "Record Restoration →", cls: "bg-slate-700 text-white hover:bg-slate-800" };
+            return { label: "Complete & Close →", cls: "bg-green-600 text-white hover:bg-green-700" };
+          })();
+          return (
+        <div className="flex gap-2 mt-3 flex-wrap items-center">
           <button
             onClick={() => onTakeAction(imp)}
-            className="px-3 py-1.5 text-xs bg-slate-700 text-white rounded-md hover:bg-slate-800 transition-colors"
+            className={`px-3 py-1.5 text-xs rounded-md font-semibold transition-colors ${nextAction.cls}`}
           >
-            Take Action
+            {nextAction.label}
           </button>
           <button
             onClick={() => onViewPacket(imp.id)}
             className="px-3 py-1.5 text-xs border border-slate-400 text-slate-700 rounded-md hover:bg-slate-100 transition-colors"
           >
-            View Timeline
+            View Packet
           </button>
+          <button
+            onClick={() => setShowNote(v => !v)}
+            className="px-3 py-1.5 text-xs border border-slate-300 text-slate-500 rounded-md hover:bg-slate-50 transition-colors"
+          >
+            + Note
+          </button>
+          {noteConfirm && (
+            <span className="text-xs text-green-700 font-semibold">{noteConfirm}</span>
+          )}
         </div>
+          );
+        })()}
+
+        {showNote && (
+          <div className="mt-2 flex gap-2 items-start">
+            <textarea
+              autoFocus
+              className="flex-1 border border-slate-300 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-slate-400"
+              rows={2}
+              placeholder="Log an observation, status update, or action taken..."
+              value={noteText}
+              onChange={e => setNoteText(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveNote(); }}
+            />
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={saveNote}
+                disabled={noteSaving || !noteText.trim()}
+                className="px-3 py-1.5 text-xs bg-slate-700 text-white rounded hover:bg-slate-800 disabled:opacity-40 font-semibold"
+              >
+                {noteSaving ? "..." : "Save"}
+              </button>
+              <button
+                onClick={() => { setShowNote(false); setNoteText(""); }}
+                className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -306,6 +426,48 @@ function ClosedCard({ imp, onViewPacket }: { imp: Impairment; onViewPacket: (id:
   );
 }
 
+function HeroBanner({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div className="mb-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
+      <div className="px-6 py-5 flex items-start gap-5">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-amber-500 rounded-md flex items-center justify-center text-sm flex-shrink-0">
+              🔥
+            </div>
+            <h2 className="text-lg font-bold text-white">Welcome to ImpairmentOS</h2>
+          </div>
+          <p className="text-slate-300 text-sm leading-relaxed mb-3">
+            The impairment management workflow that produces audit-ready records the moment a fire protection system goes offline.
+            Every jurisdiction's rules enforced. Every step timestamped. Every packet complete before it leaves the truck.
+          </p>
+          <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+              <span>Jurisdiction-aware compliance enforcement</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span>Real-time state machine guards</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              <span>Audit-ready packets on close</span>
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={onDismiss}
+          className="text-slate-500 hover:text-slate-300 text-sm flex-shrink-0 mt-1"
+          title="Dismiss"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Dashboard({ onViewPacket, onTakeAction, filterPropertyId }: Props) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -313,16 +475,33 @@ export function Dashboard({ onViewPacket, onTakeAction, filterPropertyId }: Prop
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | "all">(
     filterPropertyId ?? "all"
   );
+  const [showHero, setShowHero] = useState(() => {
+    try { return localStorage.getItem("impairmentos_hero_dismissed") !== "1"; }
+    catch { return true; }
+  });
 
-  const load = () => {
-    setLoading(true);
+  function dismissHero() {
+    setShowHero(false);
+    try { localStorage.setItem("impairmentos_hero_dismissed", "1"); }
+    catch {}
+  }
+
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+
+  const load = (silent = false) => {
+    if (!silent) setLoading(true);
     api.getDashboard()
-      .then(setData)
-      .catch(e => setError(String(e)))
+      .then(d => { setData(d); setLastRefresh(new Date()); })
+      .catch(e => { if (!silent) setError(String(e)); })
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => load(true), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   if (loading) return (
     <div className="max-w-5xl mx-auto px-6 py-16 text-center text-slate-500">
@@ -334,11 +513,12 @@ export function Dashboard({ onViewPacket, onTakeAction, filterPropertyId }: Prop
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-6">
+      {showHero && <HeroBanner onDismiss={dismissHero} />}
       {/* Stat cards */}
       {(() => {
         const blockedCount = data.active_impairments.filter(i => computeViolations(i).length > 0).length;
         return (
-          <div className="grid grid-cols-5 gap-4 mb-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">
             <StatCard
               label="Active Impairments"
               value={data.active_impairments.length}
@@ -418,12 +598,19 @@ export function Dashboard({ onViewPacket, onTakeAction, filterPropertyId }: Prop
                   </button>
                 )}
               </div>
-              <button
-                onClick={load}
-                className="px-3 py-1.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-50 transition-colors"
-              >
-                ↺ Refresh
-              </button>
+              <div className="flex items-center gap-2">
+                {lastRefresh && (
+                  <span className="text-[10px] text-slate-400">
+                    Auto-refreshes every 30s
+                  </span>
+                )}
+                <button
+                  onClick={() => load()}
+                  className="px-3 py-1.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-50 transition-colors"
+                >
+                  ↺ Refresh
+                </button>
+              </div>
             </div>
 
             <AlertBanner alerts={filteredAlerts} />

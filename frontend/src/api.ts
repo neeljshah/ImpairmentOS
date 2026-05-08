@@ -1,4 +1,4 @@
-const BASE = "http://localhost:8001";
+const BASE = "http://localhost:8000";
 
 export interface Jurisdiction {
   id: number;
@@ -302,6 +302,13 @@ export const api = {
 
   getPropertyDeficiencies: (propertyId: number) =>
     apiFetch<Deficiency[]>(`/properties/${propertyId}/deficiencies`),
+
+  updateDeficiencyStatus: (id: number, data: {
+    status: string;
+    resolved_by?: string;
+    notes?: string;
+    proposal_response?: string;
+  }) => apiFetch<Deficiency>(`/deficiencies/${id}/status`, { method: "PATCH", body: JSON.stringify(data) }),
 
   resetDemo: () =>
     apiFetch<{ status: string; message: string }>("/demo/reset", { method: "POST" }),

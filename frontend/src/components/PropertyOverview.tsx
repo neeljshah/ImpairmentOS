@@ -60,7 +60,7 @@ export function PropertyOverview({ onFilterDashboard, onExportRecords }: Props) 
       </div>
 
       {/* Summary bar */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         {[
           { label: "Violations", count: redCount, color: "border-red-500", valueColor: "text-red-600", sub: "immediate action" },
           { label: "Active Impairments", count: amberCount, color: "border-amber-500", valueColor: "text-amber-600", sub: "in progress" },

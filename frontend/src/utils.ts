@@ -1,7 +1,12 @@
+// Backend stores UTC datetimes without tz suffix. Without "Z", JS treats them as local time.
+// Appending "Z" forces UTC interpretation so elapsed times and displays are correct.
+function parseUTC(iso: string): Date {
+  return new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z");
+}
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
+  return parseUTC(iso).toLocaleString("en-US", {
     month: "short", day: "numeric", year: "numeric",
     hour: "numeric", minute: "2-digit", hour12: true,
   });
@@ -9,19 +14,17 @@ export function formatDateTime(iso: string | null | undefined): string {
 
 export function formatTime(iso: string | null | undefined): string {
   if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  return parseUTC(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return parseUTC(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export function durationHours(start: string, end?: string | null): number {
-  const s = new Date(start).getTime();
-  const e = end ? new Date(end).getTime() : Date.now();
+  const s = parseUTC(start).getTime();
+  const e = end ? parseUTC(end).getTime() : Date.now();
   return (e - s) / 3600000;
 }
 

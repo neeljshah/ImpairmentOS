@@ -169,7 +169,7 @@ export function Walkthrough({ cedarImpairment, onViewWizard, onViewPacket, onBac
         nextLabel="See What Went Wrong →"
       >
         <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               { label: "Duration", value: "5h 50m", color: "text-red-600" },
               { label: "AHJ Notified", value: "Never", color: "text-red-600" },
@@ -308,7 +308,7 @@ export function Walkthrough({ cedarImpairment, onViewWizard, onViewPacket, onBac
         onPrev={() => setStep(4)}
       >
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             {[
               { who: "Robert Halberd (Owner)", wants: "Every inspection report for Cedar Heights — 3 years on a thumb drive by Friday." },
               { who: "Marshal Elena Reyes (AHJ)", wants: "3 years of ITM records within 30 days." },

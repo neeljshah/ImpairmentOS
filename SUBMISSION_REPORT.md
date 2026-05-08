@@ -83,9 +83,9 @@ The secondary differentiator is the Impairment Packet as a standalone, portable 
 
 **Start the prototype:** Run `start.bat` from the project root. This opens two terminal windows (backend + frontend) and launches the browser automatically.
 
-- **Backend API**: `http://localhost:8001` (FastAPI / SQLite, auto-seeds on startup)
+- **Backend API**: `http://localhost:8000` (FastAPI / SQLite, auto-seeds on startup)
 - **Frontend**: `http://localhost:5173` (React / Vite)
-- **API Docs**: `http://localhost:8001/docs`
+- **API Docs**: `http://localhost:8000/docs`
 
 **What's built:**
 

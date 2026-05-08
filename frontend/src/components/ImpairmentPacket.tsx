@@ -203,7 +203,9 @@ export function ImpairmentPacket({ impairmentId, onBack }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [noteText, setNoteText] = useState("");
-  const [noteBy, setNoteBy] = useState("");
+  const [noteBy, setNoteBy] = useState(() => {
+    try { return localStorage.getItem("impairmentos_last_tech") || ""; } catch { return ""; }
+  });
   const [noteSubmitting, setNoteSubmitting] = useState(false);
   const [noteError, setNoteError] = useState<string | null>(null);
 
@@ -343,7 +345,7 @@ export function ImpairmentPacket({ impairmentId, onBack }: Props) {
           )}
 
           {/* Property & System */}
-          <div className="grid grid-cols-2 gap-6 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
             <div>
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Property</div>
               <div className="font-semibold text-slate-900">{data.property.name}</div>

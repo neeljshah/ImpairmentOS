@@ -7,50 +7,163 @@
   .no-print { display: none !important; }
   .print-only { display: block !important; }
 
-  body {
+  @page {
+    size: letter;
+    margin: 1.5cm 1.5cm 2cm 1.5cm;
+  }
+
+  html, body {
     background: white !important;
-    font-size: 11pt;
+    font-size: 10.5pt;
     color: #111 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   * {
     box-shadow: none !important;
+    transition: none !important;
   }
 
   /* Full width in print */
   .max-w-3xl, .max-w-4xl, .max-w-5xl {
     max-width: 100% !important;
-    padding-left: 1cm !important;
-    padding-right: 1cm !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
 
-  /* Prevent page breaks inside cards */
-  .no-break, [class*="rounded-lg"] {
+  /* Remove outer page padding — @page margin handles it */
+  .p-6 {
+    padding: 0 !important;
+  }
+
+  /* Packet/export outer wrapper — drop the rounded border for clean print edge */
+  .border.border-slate-300.rounded-xl {
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* ── Preserve dark header branding ── */
+  .bg-slate-900 {
+    background: #0f172a !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .bg-slate-900 .text-amber-400 {
+    color: #fbbf24 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .bg-slate-900 .bg-amber-500 {
+    background: #f59e0b !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Status banners — keep color for visual scanning ── */
+  .bg-red-600 {
+    background: #dc2626 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .bg-green-600 {
+    background: #16a34a !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .bg-amber-500 {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Compliance badges — preserve color coding ── */
+  .bg-green-100, .bg-red-100, .bg-yellow-100, .bg-amber-100,
+  .bg-slate-100, .bg-blue-100, .bg-orange-100,
+  .bg-red-50, .bg-green-50, .bg-amber-50, .bg-blue-50,
+  .bg-purple-50, .bg-yellow-50, .bg-slate-50, .bg-orange-50 {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Timeline dots ── */
+  .bg-slate-800, .bg-purple-600, .bg-amber-500, .bg-amber-700,
+  .bg-green-600, .bg-green-500, .bg-red-600, .bg-red-500, .bg-slate-900 {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Timeline connector line */
+  .bg-slate-200 {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Event log left borders ── */
+  [class*="border-l-4"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Page break control ── */
+  .no-break {
     page-break-inside: avoid;
+    break-inside: avoid;
   }
 
-  /* Records export: each impairment on its own page */
+  /* Keep timeline, compliance check, and event entries together */
+  .space-y-5 > div,
+  .space-y-2 > div,
+  .space-y-3 > div {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Section headers should stay with their content */
+  .text-xs.font-bold.uppercase.tracking-widest {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  hr {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Records export: each impairment record on its own page */
   .export-record-break {
     page-break-before: always;
+    break-before: page;
   }
 
-  /* Dark backgrounds become outlines */
-  .bg-slate-900 {
-    background: white !important;
-    border: 2px solid #111 !important;
-    color: #111 !important;
+  /* Stat cards in deficiency tracker — keep on one row */
+  .grid.grid-cols-4 {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
-  .bg-red-600, .bg-green-600, .bg-amber-500 {
-    background: #eee !important;
-    color: #111 !important;
-    border: 1px solid #aaa !important;
+  /* ── Links — show URL in print ── */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: #666;
   }
 
-  /* Ensure color indicators remain visible */
-  .bg-red-500, .bg-amber-500, .bg-green-500 {
-    print-color-adjust: exact;
+  /* ── Footer — always visible at bottom ── */
+  .border-t.border-slate-200.pt-4.text-xs {
+    margin-top: 1.5em;
+    padding-top: 0.75em;
+    border-top: 1px solid #ccc !important;
+  }
+
+  /* ── Warning/violation boxes ── */
+  .border-red-400, .border-red-300, .border-orange-300 {
     -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    border-color: #f87171 !important;
   }
 }
 

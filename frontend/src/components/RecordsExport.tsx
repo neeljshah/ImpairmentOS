@@ -156,7 +156,7 @@ export function RecordsExport({ propertyId, startDate, endDate, onBack }: Props)
           {/* Property details */}
           <div>
             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Property</div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <div className="text-2xl font-bold text-slate-900">{data.property.name}</div>
                 <div className="text-slate-600 mt-1">{data.property.address}</div>
@@ -186,7 +186,7 @@ export function RecordsExport({ propertyId, startDate, endDate, onBack }: Props)
             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
               Summary — {data.date_range.start} to {data.date_range.end}
             </div>
-            <div className="grid grid-cols-5 gap-3 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-center">
               {[
                 { label: "Total", value: data.summary.total_impairments, color: "text-slate-900" },
                 { label: "Closed", value: data.summary.closed, color: "text-green-700" },

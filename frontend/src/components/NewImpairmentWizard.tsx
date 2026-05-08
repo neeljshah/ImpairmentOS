@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Property, Impairment } from "../api";
-import { systemTypeLabel } from "../utils";
+import { systemTypeLabel, durationHours } from "../utils";
 
 interface Props {
   onDone: (imp: Impairment) => void;
@@ -10,25 +10,21 @@ interface Props {
 }
 
 type Step =
-  | "select_property"
-  | "describe"
-  | "open"
+  | "open_impairment"
   | "ahj"
   | "fire_watch"
   | "restore_test"
   | "close";
 
 const STEP_LABELS: Record<Step, string> = {
-  select_property: "1/7 — Select Property & System",
-  describe: "2/7 — Describe Impairment",
-  open: "3/7 — Open Impairment",
-  ahj: "4/7 — AHJ Notification",
-  fire_watch: "5/7 — Fire Watch",
-  restore_test: "6/7 — Restoration & Testing",
-  close: "7/7 — Close & Generate Packet",
+  open_impairment: "1/5 — Open Impairment",
+  ahj: "2/5 — AHJ Notification",
+  fire_watch: "3/5 — Fire Watch",
+  restore_test: "4/5 — Restoration & Testing",
+  close: "5/5 — Close & Generate Packet",
 };
 
-const STEPS: Step[] = ["select_property", "describe", "open", "ahj", "fire_watch", "restore_test", "close"];
+const STEPS: Step[] = ["open_impairment", "ahj", "fire_watch", "restore_test", "close"];
 
 const QUICK_REASONS = [
   "Frozen pipe at vertical riser",
@@ -40,14 +36,40 @@ const QUICK_REASONS = [
   "Other",
 ];
 
+const LAST_TECH_KEY = "impairmentos_last_tech";
+const LAST_PROPERTY_KEY = "impairmentos_last_property";
+const LAST_SYSTEM_KEY = "impairmentos_last_system";
+const LAST_FW_ASSIGNEE_KEY = "impairmentos_last_fw_assignee";
+
+function savedTech(): string {
+  try { return localStorage.getItem(LAST_TECH_KEY) || ""; } catch { return ""; }
+}
+function saveTech(name: string) {
+  if (!name.trim()) return;
+  try { localStorage.setItem(LAST_TECH_KEY, name.trim()); } catch {}
+}
+function savedNum(key: string): number | "" {
+  try { const v = localStorage.getItem(key); return v ? Number(v) : ""; } catch { return ""; }
+}
+function saveNum(key: string, val: number) {
+  try { localStorage.setItem(key, String(val)); } catch {}
+}
+function savedFwAssignee(propertyId: number): string {
+  try { return localStorage.getItem(`${LAST_FW_ASSIGNEE_KEY}_${propertyId}`) || ""; } catch { return ""; }
+}
+function saveFwAssignee(propertyId: number, name: string) {
+  if (!name.trim()) return;
+  try { localStorage.setItem(`${LAST_FW_ASSIGNEE_KEY}_${propertyId}`, name.trim()); } catch {}
+}
+
 export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Props) {
-  const [step, setStep] = useState<Step>("select_property");
+  const [step, setStep] = useState<Step>("open_impairment");
   const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<number | "">("");
-  const [selectedSystemId, setSelectedSystemId] = useState<number | "">("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | "">(() => savedNum(LAST_PROPERTY_KEY));
+  const [selectedSystemId, setSelectedSystemId] = useState<number | "">(() => savedNum(LAST_SYSTEM_KEY));
   const [reason, setReason] = useState("");
   const [estimatedHours, setEstimatedHours] = useState("");
-  const [openedBy, setOpenedBy] = useState("");
+  const [openedBy, setOpenedBy] = useState(savedTech);
   const [impairment, setImpairment] = useState<Impairment | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -55,17 +77,17 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
   // AHJ step state
   const [ahjMethod, setAhjMethod] = useState("phone");
   const [ahjRef, setAhjRef] = useState("");
-  const [ahjBy, setAhjBy] = useState("");
+  const [ahjBy, setAhjBy] = useState(savedTech);
   const [skipAhj, setSkipAhj] = useState(false);
 
   // Fire watch step state
   const [fwName, setFwName] = useState("");
   const [fwOrg, setFwOrg] = useState("");
-  const [fwBy, setFwBy] = useState("");
+  const [fwBy, setFwBy] = useState(savedTech);
   const [skipFireWatch, setSkipFireWatch] = useState(false);
 
   // Restore & test step state
-  const [restoredBy, setRestoredBy] = useState("");
+  const [restoredBy, setRestoredBy] = useState(savedTech);
   const [restorationNotes, setRestorationNotes] = useState("");
   const [endFwBy, setEndFwBy] = useState("");
   const [psiStatic, setPsiStatic] = useState("");
@@ -74,7 +96,7 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
   const [skipDrain, setSkipDrain] = useState(false);
 
   // Close step state
-  const [closedBy, setClosedBy] = useState("");
+  const [closedBy, setClosedBy] = useState(savedTech);
   const [closureNotes, setClosureNotes] = useState("");
   const [closeError, setCloseError] = useState<string[]>([]);
 
@@ -99,23 +121,59 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
       } else {
         setStep("close");
       }
+      // Pre-fill all "By" fields from the impairment's opener (only if not already set from localStorage)
+      if (imp.opened_by) {
+        setOpenedBy(imp.opened_by);
+        setAhjBy(prev => prev || imp.opened_by);
+        setFwBy(prev => prev || imp.opened_by);
+        setRestoredBy(prev => prev || imp.opened_by);
+        setClosedBy(prev => prev || imp.opened_by);
+      }
+      setFwOrg(prev => prev || imp.system.property.property_manager || imp.system.property.owner_entity || "");
+      setFwName(prev => prev || savedFwAssignee(imp.system.property.id));
     }
   }, [prefillImpairment]);
 
   const selectedProperty = properties.find(p => p.id === selectedPropertyId);
   const jur = selectedProperty?.jurisdiction || impairment?.system.property.jurisdiction;
 
+  // Auto-skip AHJ when jurisdiction doesn't require it
+  useEffect(() => {
+    if (jur && !jur.ahj_notification_required) setSkipAhj(true);
+  }, [jur?.ahj_notification_required]);
+
+  // Auto-skip main drain when impairment was open < 4h
+  useEffect(() => {
+    if (impairment) {
+      const elapsedH = durationHours(impairment.opened_at);
+      if (elapsedH < 4) setSkipDrain(true);
+    }
+  }, [impairment?.id]);
+
   const stepIndex = STEPS.indexOf(step);
   const progress = ((stepIndex + 1) / STEPS.length) * 100;
 
   async function handleOpen() {
-    if (!selectedSystemId || !reason || !openedBy) {
-      setError("Please fill in all required fields.");
+    const missing: string[] = [];
+    if (!selectedPropertyId) missing.push("Select a property");
+    else if (!selectedSystemId) missing.push("Select a system");
+    if (!reason) missing.push("Enter a reason for the impairment");
+    if (!openedBy) missing.push("Enter your name");
+    if (missing.length) {
+      setError(missing.join(" · "));
       return;
     }
     setError(null);
     setSubmitting(true);
     try {
+      saveTech(openedBy);
+      if (selectedPropertyId) saveNum(LAST_PROPERTY_KEY, Number(selectedPropertyId));
+      if (selectedSystemId) saveNum(LAST_SYSTEM_KEY, Number(selectedSystemId));
+      // Propagate name to all downstream "By" fields if they're still blank
+      if (!ahjBy) setAhjBy(openedBy);
+      if (!fwBy) setFwBy(openedBy);
+      if (!restoredBy) setRestoredBy(openedBy);
+      if (!closedBy) setClosedBy(openedBy);
       const imp = await api.createImpairment({
         system_id: Number(selectedSystemId),
         reason,
@@ -125,6 +183,10 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
         gps_lon: -71.0589,
       });
       setImpairment(imp);
+      // Pre-fill fire watch fields from property management info and memory
+      if (!fwOrg) setFwOrg(imp.system.property.property_manager || imp.system.property.owner_entity || "");
+      const lastAssignee = savedFwAssignee(imp.system.property.id);
+      if (lastAssignee) setFwName(lastAssignee);
       setStep("ahj");
     } catch (e: any) {
       setError(e?.detail || "Failed to open impairment");
@@ -143,6 +205,7 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
     setError(null);
     setSubmitting(true);
     try {
+      saveTech(ahjBy);
       const updated = await api.notifyAHJ(impairment.id, {
         method: ahjMethod,
         ref: ahjRef || undefined,
@@ -167,6 +230,8 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
     setError(null);
     setSubmitting(true);
     try {
+      saveTech(fwBy);
+      saveFwAssignee(impairment.system.property.id, fwName);
       const updated = await api.startFireWatch(impairment.id, {
         assigned_to: fwName,
         organization: fwOrg || undefined,
@@ -187,6 +252,7 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
     setError(null);
     setSubmitting(true);
     try {
+      saveTech(restoredBy);
       // End fire watch if it's active (default performer to restoring tech)
       if (impairment.fire_watch_started_at && !impairment.fire_watch_ended_at) {
         await api.endFireWatch(impairment.id, { performed_by: endFwBy || restoredBy });
@@ -250,7 +316,14 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
         <h1 className="text-xl font-bold text-slate-900">
           {prefillImpairment ? "Complete Impairment" : "New Impairment"}
         </h1>
-        <button onClick={onCancel} className="text-sm text-slate-500 hover:text-slate-700">
+        <button
+          onClick={() => {
+            const hasData = impairment || reason || openedBy !== savedTech();
+            if (hasData && !window.confirm("Discard changes and go back?")) return;
+            onCancel();
+          }}
+          className="text-sm text-slate-500 hover:text-slate-700"
+        >
           Cancel
         </button>
       </div>
@@ -280,192 +353,176 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
         </div>
       </div>
 
+      {/* System context chip — shown on steps 2-5 for newly created impairments */}
+      {impairment && !prefillImpairment && step !== "open_impairment" && (
+        <div className="mb-4 text-xs bg-slate-50 border border-slate-200 rounded px-3 py-2 flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-slate-800">{impairment.system.property.name}</span>
+          <span className="text-slate-400">—</span>
+          <span className="text-slate-700">{impairment.system.zone || systemTypeLabel(impairment.system.system_type)}</span>
+          <span className="text-slate-400">·</span>
+          <span className="text-slate-500 truncate max-w-xs">{impairment.reason}</span>
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-300 rounded text-sm text-red-700">
           {error}
         </div>
       )}
 
-      {/* ── Step 1: Select Property ── */}
-      {step === "select_property" && (
+      {/* ── Step 1: Open Impairment (property + system + reason + technician) ── */}
+      {step === "open_impairment" && (
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Property</label>
-            <select
-              className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
-              value={selectedPropertyId}
-              onChange={e => { setSelectedPropertyId(Number(e.target.value)); setSelectedSystemId(""); }}
-            >
-              <option value="">Select property...</option>
-              {properties.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Property *</label>
+              <select
+                className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
+                value={selectedPropertyId}
+                onChange={e => { setSelectedPropertyId(Number(e.target.value)); setSelectedSystemId(""); }}
+              >
+                <option value="">Select property...</option>
+                {properties.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">System *</label>
+              <select
+                className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
+                value={selectedSystemId}
+                onChange={e => setSelectedSystemId(Number(e.target.value))}
+                disabled={!selectedProperty}
+              >
+                <option value="">{selectedProperty ? "Select system..." : "Select property first"}</option>
+                {selectedProperty?.systems.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {systemTypeLabel(s.system_type)}{s.zone ? ` — ${s.zone}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          {selectedProperty && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">System</label>
-                <select
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
-                  value={selectedSystemId}
-                  onChange={e => setSelectedSystemId(Number(e.target.value))}
-                >
-                  <option value="">Select system...</option>
-                  {selectedProperty.systems.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {systemTypeLabel(s.system_type)}{s.zone ? ` — ${s.zone}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="bg-slate-50 border border-slate-200 rounded p-3 text-sm">
-                <div className="font-semibold text-slate-800 mb-1">Jurisdiction: {selectedProperty.jurisdiction.name}</div>
-                <div className="text-slate-700">NFPA 25 Edition: {selectedProperty.jurisdiction.nfpa25_edition}</div>
-                <div className="text-slate-700">
-                  AHJ Notification: <strong>{ahjLabel}</strong>
-                  {selectedProperty.jurisdiction.local_code_ref && (
-                    <span className="ml-1 text-slate-500">({selectedProperty.jurisdiction.local_code_ref})</span>
-                  )}
-                </div>
-                <div className="text-slate-700">
-                  AHJ Contact: {selectedProperty.jurisdiction.ahj_contact_name || "—"}
-                  {selectedProperty.jurisdiction.ahj_contact_phone && ` — ${selectedProperty.jurisdiction.ahj_contact_phone}`}
-                </div>
-              </div>
-            </>
-          )}
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                if (!selectedSystemId) { setError("Select a property and system."); return; }
-                setError(null);
-                setStep("describe");
-              }}
-              className="px-4 py-2 bg-amber-500 text-slate-900 rounded text-sm hover:bg-amber-400 font-semibold"
-            >
-              Next →
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* ── Step 2: Describe ── */}
-      {step === "describe" && (
-        <div className="space-y-4">
+          {selectedProperty && (
+            <div className="bg-slate-900 text-white rounded-lg overflow-hidden">
+              <div className="px-4 py-2 bg-slate-800 flex items-center gap-2 flex-wrap">
+                <span className="text-amber-400 text-xs font-bold uppercase tracking-wider">Jurisdiction Rules</span>
+                <span className="text-slate-400 text-xs">|</span>
+                <span className="text-white text-sm font-semibold">{selectedProperty.jurisdiction.name}</span>
+                <span className="ml-auto text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded font-mono">
+                  NFPA 25-{selectedProperty.jurisdiction.nfpa25_edition}
+                </span>
+              </div>
+              <div className="px-4 py-2.5 flex flex-wrap gap-x-6 gap-y-1.5 text-xs">
+                <span className={ahjRequired ? "text-red-300 font-semibold" : "text-green-300"}>
+                  {ahjRequired ? `⚠ AHJ: ${ahjThreshold === 0 ? "ALL impairments" : `>${ahjThreshold}h`}` : "○ AHJ: Not required"}
+                  {selectedProperty.jurisdiction.local_code_ref ? ` (${selectedProperty.jurisdiction.local_code_ref})` : ""}
+                </span>
+                <span className="text-slate-300">Fire Watch: immediate (§15.5.1)</span>
+                <span className="text-slate-300">Main Drain: if &gt;4h (§13.2.5)</span>
+                {selectedProperty.jurisdiction.ahj_contact_name && (
+                  <span className="text-slate-400">
+                    AHJ: {selectedProperty.jurisdiction.ahj_contact_name}
+                    {selectedProperty.jurisdiction.ahj_contact_phone && (
+                      <> — <a href={`tel:${selectedProperty.jurisdiction.ahj_contact_phone}`} className="text-amber-400 font-mono hover:text-amber-300 underline">{selectedProperty.jurisdiction.ahj_contact_phone}</a></>
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Reason / Description</label>
-            <input
-              className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              placeholder="Describe the impairment..."
-            />
-          </div>
-          <div>
-            <div className="text-sm text-slate-500 mb-2">Quick Select:</div>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-sm font-medium text-slate-700 mb-1">Reason *</label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
               {QUICK_REASONS.map(r => (
                 <button
                   key={r}
-                  onClick={() => setReason(r)}
+                  onClick={() => {
+                    if (r === "Other") {
+                      setReason("");
+                      setTimeout(() => document.getElementById("reason-input")?.focus(), 0);
+                    } else {
+                      setReason(r);
+                    }
+                  }}
                   className={`text-xs px-2 py-1 rounded border transition-colors ${
-                    reason === r
+                    reason === r && r !== "Other"
                       ? "bg-amber-500 text-slate-900 border-amber-500 font-semibold"
-                      : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                      : r === "Other" && !QUICK_REASONS.slice(0, -1).includes(reason) && reason !== ""
+                        ? "bg-amber-500 text-slate-900 border-amber-500 font-semibold"
+                        : "border-slate-300 text-slate-700 hover:bg-slate-50"
                   }`}
                 >
                   {r}
                 </button>
               ))}
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Estimated Duration (hours)</label>
             <input
-              type="number"
-              className="w-32 border border-slate-300 rounded px-3 py-2 text-sm"
-              value={estimatedHours}
-              onChange={e => setEstimatedHours(e.target.value)}
-              placeholder="e.g. 6"
-            />
-          </div>
-          <div className="flex justify-between">
-            <button onClick={() => setStep("select_property")} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">
-              ← Back
-            </button>
-            <button
-              onClick={() => {
-                if (!reason) { setError("Enter a reason."); return; }
-                setError(null);
-                setStep("open");
-              }}
-              className="px-4 py-2 bg-amber-500 text-slate-900 rounded text-sm hover:bg-amber-400 font-semibold"
-            >
-              Next →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Step 3: Open ── */}
-      {step === "open" && (
-        <div className="space-y-4">
-          <div className="bg-slate-50 border border-slate-200 rounded p-3 text-sm space-y-1">
-            <div className="flex items-center gap-2 text-slate-700">
-              <span className="text-green-600 font-bold">&#10003;</span>
-              Timestamp: {new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} (auto)
-            </div>
-            <div className="flex items-center gap-2 text-slate-700">
-              <span className="text-green-600 font-bold">&#10003;</span>
-              GPS: 42.3601, -71.0589 (auto-stamped)
-            </div>
-          </div>
-
-          {ahjRequired && (
-            <div className="bg-amber-50 border border-amber-300 rounded p-3 text-sm">
-              <div className="font-semibold text-amber-800 mb-0.5">AHJ NOTIFICATION REQUIRED</div>
-              <div className="text-amber-700">
-                {jur?.local_code_ref} requires {ahjThreshold === 0 ? "immediate" : `notification within ${ahjThreshold}h for`} notification for{" "}
-                {ahjThreshold === 0 ? "all impairments" : "impairments exceeding threshold"}.
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Opened By *</label>
-            <input
+              id="reason-input"
               className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
-              value={openedBy}
-              onChange={e => setOpenedBy(e.target.value)}
-              placeholder="Technician name"
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              placeholder="Or type a custom description..."
             />
           </div>
 
-          <div className="flex justify-between">
-            <button onClick={() => setStep("describe")} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">
-              ← Back
-            </button>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Your Name *</label>
+              <input
+                className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
+                value={openedBy}
+                onChange={e => setOpenedBy(e.target.value)}
+                placeholder="Technician name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Est. Duration (hrs)</label>
+              <input
+                type="number"
+                className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
+                value={estimatedHours}
+                onChange={e => setEstimatedHours(e.target.value)}
+                placeholder="e.g. 4"
+              />
+            </div>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded px-3 py-2 text-xs text-slate-500 flex gap-4">
+            <span>&#10003; Timestamp: {new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} (auto)</span>
+            <span>&#10003; GPS auto-stamped</span>
+          </div>
+
+          <div className="flex justify-end">
             <button
               onClick={handleOpen}
               disabled={submitting}
-              className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 font-semibold disabled:opacity-50"
+              className="px-5 py-2.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 font-semibold disabled:opacity-50"
             >
-              {submitting ? "Opening..." : "Open Impairment"}
+              {submitting ? "Opening..." : "Open Impairment →"}
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Step 4: AHJ Notification ── */}
+      {/* ── Step 2: AHJ Notification ── */}
       {step === "ahj" && impairment && (
         <div className="space-y-4">
           {ahjRequired ? (
             <div className="bg-amber-50 border border-amber-300 rounded p-3 text-sm">
               <div className="font-semibold text-amber-800">Notification required by {jur?.local_code_ref}</div>
-              <div className="text-amber-700 text-xs mt-0.5">
-                Contact: {jur?.ahj_contact_name} — {jur?.ahj_contact_phone}
-              </div>
+              <div className="text-amber-700 text-xs mt-0.5">Contact: {jur?.ahj_contact_name}</div>
+              {jur?.ahj_contact_phone && (
+                <a
+                  href={`tel:${jur.ahj_contact_phone}`}
+                  className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-amber-400 rounded-lg text-sm font-bold text-amber-900 hover:bg-amber-100 transition-colors"
+                >
+                  📞 {jur.ahj_contact_phone}
+                </a>
+              )}
             </div>
           ) : (
             <div className="bg-green-50 border border-green-200 rounded p-3 text-sm text-green-700">
@@ -477,18 +534,26 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
             <>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Notification Method</label>
-                <div className="flex gap-3">
-                  {["phone", "email", "in_person", "portal"].map(m => (
-                    <label key={m} className="flex items-center gap-1 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="method"
-                        value={m}
-                        checked={ahjMethod === m}
-                        onChange={() => setAhjMethod(m)}
-                      />
-                      {m.replace("_", " ")}
-                    </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { val: "phone", icon: "📞", label: "Phone" },
+                    { val: "email", icon: "✉", label: "Email" },
+                    { val: "in_person", icon: "🤝", label: "In Person" },
+                    { val: "portal", icon: "🌐", label: "Portal" },
+                  ].map(m => (
+                    <button
+                      key={m.val}
+                      type="button"
+                      onClick={() => setAhjMethod(m.val)}
+                      className={`flex flex-col items-center gap-1 py-2.5 rounded-lg border-2 text-xs font-semibold transition-colors ${
+                        ahjMethod === m.val
+                          ? "border-amber-500 bg-amber-50 text-amber-800"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      <span className="text-base">{m.icon}</span>
+                      {m.label}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -625,7 +690,7 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
                 className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
                 value={endFwBy}
                 onChange={e => setEndFwBy(e.target.value)}
-                placeholder="Fire watch personnel name"
+                placeholder="Defaults to restoring technician"
               />
             </div>
           )}
@@ -635,10 +700,19 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
               <div className="text-sm font-semibold text-slate-700">Main Drain Test</div>
               <div className="text-xs text-slate-500">Required by NFPA 25 §13.2.5 after impairment &gt; 4 hours</div>
             </div>
-            <label className="flex items-center gap-2 text-sm cursor-pointer mb-3">
-              <input type="checkbox" checked={skipDrain} onChange={e => setSkipDrain(e.target.checked)} />
-              Skip main drain test (impairment under 4 hours)
-            </label>
+            {(() => {
+              const elapsedH = impairment ? durationHours(impairment.opened_at) : 0;
+              const elapsedLabel = elapsedH >= 1 ? `${Math.floor(elapsedH)}h ${Math.floor((elapsedH % 1) * 60)}m` : `${Math.floor(elapsedH * 60)}m`;
+              return (
+                <label className="flex items-center gap-2 text-sm cursor-pointer mb-3">
+                  <input type="checkbox" checked={skipDrain} onChange={e => setSkipDrain(e.target.checked)} />
+                  <span>Skip main drain test</span>
+                  <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${elapsedH < 4 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700 font-bold"}`}>
+                    {elapsedLabel} elapsed {elapsedH < 4 ? "— under 4h" : "— REQUIRED"}
+                  </span>
+                </label>
+              );
+            })()}
             {!skipDrain && (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
@@ -704,7 +778,7 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
             <div className="font-semibold text-slate-800 mb-2">Impairment Summary</div>
             <div><strong>Property:</strong> {impairment.system.property.name} — {impairment.system.zone}</div>
             <div><strong>Duration:</strong> {(() => {
-              const h = (Date.now() - new Date(impairment.opened_at).getTime()) / 3600000;
+              const h = durationHours(impairment.opened_at);
               return `${Math.floor(h)}h ${Math.floor((h - Math.floor(h)) * 60)}m`;
             })()}</div>
             <div className={`flex items-center gap-1 ${impairment.ahj_notified ? "text-green-700" : "text-red-700 font-semibold"}`}>
@@ -736,21 +810,41 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
             <div className="bg-red-50 border border-red-400 rounded p-3">
               <div className="font-semibold text-red-800 mb-1 text-sm">Cannot close — compliance requirements not met:</div>
               {closeError.map((msg, i) => (
-                <div key={i} className="text-sm text-red-700 flex items-start gap-1">
-                  <span className="font-bold mt-0.5">&#10007;</span>
-                  <span>{msg}</span>
+                <div key={i} className="text-sm text-red-700 flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-1">
+                    <span className="font-bold mt-0.5">&#10007;</span>
+                    <span>{msg}</span>
+                  </div>
                 </div>
               ))}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {!impairment.ahj_notified && jur?.ahj_notification_required && (
+                  <button
+                    onClick={() => setStep("ahj")}
+                    className="text-xs px-2.5 py-1 bg-red-700 text-white rounded font-semibold hover:bg-red-800"
+                  >
+                    → Fix AHJ Notification
+                  </button>
+                )}
+                {(!impairment.main_drain_test_performed || (impairment.fire_watch_started_at && !impairment.fire_watch_ended_at)) && (
+                  <button
+                    onClick={() => setStep("restore_test")}
+                    className="text-xs px-2.5 py-1 bg-red-700 text-white rounded font-semibold hover:bg-red-800"
+                  >
+                    → Go Back to Restoration Step
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Closed By (Supervisor Sign-off) *</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Closed By *</label>
             <input
               className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
               value={closedBy}
               onChange={e => setClosedBy(e.target.value)}
-              placeholder="Supervisor name"
+              placeholder="Your name or supervisor"
             />
           </div>
           <div>

@@ -32,7 +32,7 @@ python -m venv venv
 venv\Scripts\activate          # Windows
 # source venv/bin/activate    # macOS/Linux
 pip install -r requirements.txt
-uvicorn main:app --port 8001 --reload
+uvicorn main:app --port 8000 --reload
 
 # Frontend (port 5173, new terminal)
 cd frontend
@@ -42,7 +42,7 @@ npm run dev
 
 Open `http://localhost:5173` — the database seeds automatically on first backend start.
 
-**API docs:** `http://localhost:8001/docs`
+**API docs:** `http://localhost:8000/docs`
 
 ## Demo Walkthrough
 
