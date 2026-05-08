@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Print styles ── */
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+
+  body {
+    background: white !important;
+    font-size: 11pt;
+    color: #111 !important;
+  }
+
+  * {
+    box-shadow: none !important;
+  }
+
+  /* Full width in print */
+  .max-w-3xl, .max-w-4xl, .max-w-5xl {
+    max-width: 100% !important;
+    padding-left: 1cm !important;
+    padding-right: 1cm !important;
+  }
+
+  /* Prevent page breaks inside cards */
+  .no-break, [class*="rounded-lg"] {
+    page-break-inside: avoid;
+  }
+
+  /* Records export: each impairment on its own page */
+  .export-record-break {
+    page-break-before: always;
+  }
+
+  /* Dark backgrounds become outlines */
+  .bg-slate-900 {
+    background: white !important;
+    border: 2px solid #111 !important;
+    color: #111 !important;
+  }
+
+  .bg-red-600, .bg-green-600, .bg-amber-500 {
+    background: #eee !important;
+    color: #111 !important;
+    border: 1px solid #aaa !important;
+  }
+
+  /* Ensure color indicators remain visible */
+  .bg-red-500, .bg-amber-500, .bg-green-500 {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
+.print-only { display: none; }
