@@ -37,6 +37,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/debug/static")
+def debug_static():
+    import os
+    result = {"STATIC_DIR": str(STATIC_DIR), "exists": STATIC_DIR.is_dir()}
+    if STATIC_DIR.is_dir():
+        result["files"] = os.listdir(STATIC_DIR)
+        assets = STATIC_DIR / "assets"
+        if assets.is_dir():
+            result["assets"] = os.listdir(assets)
+    result["cwd"] = os.getcwd()
+    return result
+
 app.include_router(impairments.router)
 app.include_router(dashboard.router)
 app.include_router(properties.router)
