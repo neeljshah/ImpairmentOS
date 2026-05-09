@@ -113,11 +113,9 @@ A 6-step guided walkthrough recreating the Cedar Heights scenario: from the fiel
 
 ## Live Demo
 
-**[Try ImpairmentOS →](https://impairmentos-yic2.onrender.com)**
+**[Try ImpairmentOS →](https://impairmentos-production.up.railway.app)**
 
 No install required. The demo ships with pre-loaded data — start with the Cedar Heights scenario on the dashboard.
-
-> First load may take ~30 seconds (free tier cold start). After that it's instant.
 
 ---
 
