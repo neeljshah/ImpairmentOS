@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { api } from "../api";
 import { DeficiencyList } from "./DeficiencyList";
 
 interface PropertyOverviewItem {
@@ -38,8 +39,7 @@ export function PropertyOverview({ onFilterDashboard, onExportRecords }: Props) 
   const [expandedPropertyId, setExpandedPropertyId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8001/properties/overview")
-      .then(r => r.json())
+    api.getPropertyOverview()
       .then(setItems)
       .catch(e => setError(String(e)))
       .finally(() => setLoading(false));

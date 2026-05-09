@@ -755,4 +755,4 @@ def seed_db(db: Session):
 
     db.add_all([cedar_standpipe_deficiency, cedar_pump_deficiency, wessex_gauge_deficiency])
     db.commit()
-    print("Database seeded: 3 properties, 5 impairments, 3 deficiencies across Hartwell/Wessex/Dunmoor")
+    print("Database seeded: 4 properties, 5 impairments, 3 deficiencies across Hartwell/Wessex/Dunmoor")

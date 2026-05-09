@@ -75,8 +75,9 @@ interface Props {
 function avgDuration(imps: Impairment[]): string {
   const closed = imps.filter(i => i.closed_at != null);
   if (closed.length === 0) return "—";
+  const parse = (s: string) => new Date(s.endsWith("Z") ? s : s + "Z");
   const totalMs = closed.reduce((sum, i) => {
-    return sum + new Date(i.closed_at!).getTime() - new Date(i.opened_at).getTime();
+    return sum + parse(i.closed_at!).getTime() - parse(i.opened_at).getTime();
   }, 0);
   const avgMs = totalMs / closed.length;
   const h = Math.floor(avgMs / 3600000);

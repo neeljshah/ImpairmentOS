@@ -586,7 +586,14 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
           )}
 
           <div className="flex justify-between">
-            <div />
+            {!prefillImpairment ? (
+              <button
+                onClick={() => setStep("open_impairment")}
+                className="px-4 py-2 text-sm border border-slate-300 text-slate-600 rounded hover:bg-slate-50 transition-colors"
+              >
+                ← Back
+              </button>
+            ) : <div />}
             <button
               onClick={handleNotifyAHJ}
               disabled={submitting}
@@ -648,7 +655,12 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
           )}
 
           <div className="flex justify-between">
-            <div />
+            <button
+              onClick={() => setStep("ahj")}
+              className="px-4 py-2 text-sm border border-slate-300 text-slate-600 rounded hover:bg-slate-50 transition-colors"
+            >
+              ← Back
+            </button>
             <button
               onClick={handleFireWatch}
               disabled={submitting}
@@ -759,7 +771,12 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
           </div>
 
           <div className="flex justify-between">
-            <div />
+            <button
+              onClick={() => setStep("fire_watch")}
+              className="px-4 py-2 text-sm border border-slate-300 text-slate-600 rounded hover:bg-slate-50 transition-colors"
+            >
+              ← Back
+            </button>
             <button
               onClick={handleRestoreAndTest}
               disabled={submitting}
@@ -858,7 +875,12 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
             />
           </div>
           <div className="flex justify-between">
-            <div />
+            <button
+              onClick={() => setStep("restore_test")}
+              className="px-4 py-2 text-sm border border-slate-300 text-slate-600 rounded hover:bg-slate-50 transition-colors"
+            >
+              ← Back
+            </button>
             <button
               onClick={handleClose}
               disabled={submitting}

@@ -187,7 +187,7 @@ def end_fire_watch(
         performed_by=req.performed_by,
         from_status=imp.status,
         to_status=imp.status,
-        notes=f"Fire watch ended. Hours: {imp.fire_watch_hours_computed:.2f}",
+        notes=f"Fire watch ended. Hours: {imp.fire_watch_hours_computed:.2f}" if imp.fire_watch_hours_computed is not None else "Fire watch ended.",
         performed_at=ended_at,
     )
     db.commit()
@@ -291,19 +291,35 @@ def close_impairment(
     jur = imp.system.property.jurisdiction
     sm = ImpairmentStateMachine(imp, jur)
 
-    violations = sm.get_compliance_violations()
-    blocking = [v for v in violations if v["blocks_closure"]]
-    if blocking:
+    prev_status = imp.status
+
+    try:
+        if imp.status == "restoration_testing":
+            imp.status = TransitionMiddleware.execute_transition(sm, "mark_pending_closure")
+        if imp.status == "pending_closure":
+            imp.status = TransitionMiddleware.execute_transition(sm, "close_impairment")
+        elif imp.status != "closed":
+            violations = sm.get_compliance_violations()
+            blocking = [v for v in violations if v["blocks_closure"]]
+            if blocking:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "error": "Cannot close impairment — compliance requirements not met",
+                        "violations": [v["message"] for v in blocking],
+                    },
+                )
+            imp.status = "closed"
+    except (InvalidTransitionError, ComplianceViolationError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except ValueError as exc:
         raise HTTPException(
             status_code=422,
             detail={
                 "error": "Cannot close impairment — compliance requirements not met",
-                "violations": [v["message"] for v in blocking],
+                "violations": [str(exc)],
             },
         )
-
-    prev_status = imp.status
-    imp.status = "closed"
     imp.closed_at = TimestampService.now_utc()
     imp.closed_by = req.closed_by
     imp.closure_notes = req.closure_notes
