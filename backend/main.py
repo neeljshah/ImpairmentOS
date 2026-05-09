@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from starlette.responses import FileResponse
+from starlette.responses import FileResponse, JSONResponse
 
 from database import SessionLocal
 from seed import seed_db
@@ -18,7 +18,6 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Schema is managed by Alembic — do NOT call create_all() here.
     db = SessionLocal()
     try:
         seed_db(db)
@@ -37,17 +36,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/debug/static")
-def debug_static():
-    import os
-    result = {"STATIC_DIR": str(STATIC_DIR), "exists": STATIC_DIR.is_dir()}
-    if STATIC_DIR.is_dir():
-        result["files"] = os.listdir(STATIC_DIR)
-        assets = STATIC_DIR / "assets"
-        if assets.is_dir():
-            result["assets"] = os.listdir(assets)
-    result["cwd"] = os.getcwd()
-    return result
+
+@app.api_route("/health", methods=["GET", "HEAD"])
+def health_check():
+    return {"status": "ok"}
+
 
 app.include_router(impairments.router)
 app.include_router(dashboard.router)
@@ -60,12 +53,13 @@ app.include_router(demo.router)
 if STATIC_DIR.is_dir():
     app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
 
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        file = STATIC_DIR / full_path
-        if file.is_file():
-            return FileResponse(file)
-        return FileResponse(STATIC_DIR / "index.html")
+    @app.exception_handler(404)
+    async def spa_not_found(request: Request, _exc):
+        if "text/html" in request.headers.get("accept", ""):
+            index = STATIC_DIR / "index.html"
+            if index.is_file():
+                return FileResponse(index)
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
 else:
 
     @app.get("/")
