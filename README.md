@@ -111,7 +111,17 @@ A 6-step guided walkthrough recreating the Cedar Heights scenario: from the fiel
 
 ---
 
-## Quick Start
+## Live Demo
+
+**[Try ImpairmentOS →](https://impairmentos.onrender.com)**
+
+No install required. The demo ships with pre-loaded data — start with the Cedar Heights scenario on the dashboard.
+
+> First load may take ~30 seconds (free tier cold start). After that it's instant.
+
+---
+
+## Run Locally
 
 **Prerequisites:** Python 3.11+, Node.js 18+
 
