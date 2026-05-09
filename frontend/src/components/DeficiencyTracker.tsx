@@ -92,7 +92,7 @@ const STATUS_TRANSITIONS: Record<string, { label: string; next: string; style: s
   resolved: [],
 };
 
-export function DeficiencyTracker({ onBack }: Props) {
+export function DeficiencyTracker({ onBack: _onBack }: Props) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [allDeficiencies, setAllDeficiencies] = useState<(Deficiency & { propertyName: string })[]>([]);
   const [loading, setLoading] = useState(true);

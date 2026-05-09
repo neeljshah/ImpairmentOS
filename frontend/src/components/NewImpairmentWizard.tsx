@@ -304,7 +304,7 @@ export function NewImpairmentWizard({ onDone, onCancel, prefillImpairment }: Pro
 
   const ahjRequired = jur?.ahj_notification_required;
   const ahjThreshold = jur?.notification_threshold_hours ?? 0;
-  const ahjLabel = ahjRequired
+  const _ahjLabel = ahjRequired
     ? ahjThreshold === 0
       ? "REQUIRED for all impairments"
       : `Required for impairments > ${ahjThreshold}h`
