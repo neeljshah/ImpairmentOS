@@ -2,8 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models.base import Base  # noqa: F401 — re-exported for main.py compat
 import app.models  # noqa: F401 — registers all model classes with Base.metadata
+from app.config import get_settings
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./impairmentos.db"
+SQLALCHEMY_DATABASE_URL = get_settings().database_url
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
