@@ -31,10 +31,12 @@ Thumbs.db
 beacon_packet_full.txt
 unpacked_beacon/
 
-# Planning docs
+# Planning docs (internal build notes)
 Architecture_v2.md
 Data_Migration_Plan.md
 Implementation_Sprints.md
 Project_Plan.md
 SONNET_EXECUTION_PROMPT.md
 Testing_Suite.md
+planning/PLAN*.md
+planning/TASKS.md
