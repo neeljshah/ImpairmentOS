@@ -81,11 +81,8 @@ The secondary differentiator is the Impairment Packet as a standalone, portable 
 
 ## Prototype
 
-**Start the prototype:** Run `start.bat` from the project root. This opens two terminal windows (backend + frontend) and launches the browser automatically.
-
-- **Backend API**: `http://localhost:8000` (FastAPI / SQLite, auto-seeds on startup)
-- **Frontend**: `http://localhost:5173` (React / Vite)
-- **API Docs**: `http://localhost:8000/docs`
+**Start the prototype:** 
+**[Try ImpairmentOS →](https://impairmentos-production.up.railway.app)**
 
 **What's built:**
 
