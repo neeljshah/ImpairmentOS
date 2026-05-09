@@ -19,10 +19,10 @@ interface TimelinePoint {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    complete: "bg-green-100 text-green-800",
-    missing: "bg-red-100 text-red-800",
-    partial: "bg-yellow-100 text-yellow-800",
-    not_required: "bg-slate-100 text-slate-500",
+    complete: "bg-emerald-100 text-emerald-800 ring-emerald-500/30",
+    missing: "bg-red-100 text-red-800 ring-red-500/30",
+    partial: "bg-yellow-100 text-yellow-800 ring-yellow-500/30",
+    not_required: "bg-slate-100 text-slate-500 ring-slate-400/20",
   };
   const labels: Record<string, string> = {
     complete: "COMPLETE",
@@ -31,7 +31,7 @@ function StatusBadge({ status }: { status: string }) {
     not_required: "N/A",
   };
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-bold ${colors[status] || "bg-slate-100 text-slate-500"}`}>
+    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ring-1 ring-inset ${colors[status] || "bg-slate-100 text-slate-500 ring-slate-400/20"}`}>
       {labels[status] || status.toUpperCase()}
     </span>
   );
@@ -46,32 +46,32 @@ function ComplianceIcon({ status }: { status: string }) {
 
 function EventLogEntry({ event }: { event: PacketData["events"][0] }) {
   const colors: Record<string, string> = {
-    created: "border-blue-400 bg-blue-50",
-    ahj_notified: "border-purple-400 bg-purple-50",
-    fire_watch_started: "border-amber-400 bg-amber-50",
-    fire_watch_ended: "border-amber-300 bg-amber-50",
-    repair_started: "border-yellow-400 bg-yellow-50",
-    repair_completed: "border-green-400 bg-green-50",
-    restoration_test_recorded: "border-green-500 bg-green-50",
-    closed: "border-green-600 bg-green-50",
-    note_added: "border-slate-300 bg-slate-50",
-    escalation_triggered: "border-red-400 bg-red-50",
+    created: "border-blue-400 bg-blue-50/60",
+    ahj_notified: "border-purple-400 bg-purple-50/60",
+    fire_watch_started: "border-amber-400 bg-amber-50/60",
+    fire_watch_ended: "border-amber-300 bg-amber-50/60",
+    repair_started: "border-yellow-400 bg-yellow-50/60",
+    repair_completed: "border-emerald-400 bg-emerald-50/60",
+    restoration_test_recorded: "border-emerald-500 bg-emerald-50/60",
+    closed: "border-emerald-600 bg-emerald-50/60",
+    note_added: "border-slate-300 bg-slate-50/60",
+    escalation_triggered: "border-red-400 bg-red-50/60",
   };
-  const cls = colors[event.event_type] || "border-slate-300 bg-slate-50";
+  const cls = colors[event.event_type] || "border-slate-300 bg-slate-50/60";
 
   return (
-    <div className={`border-l-4 pl-4 py-2 rounded-r ${cls}`}>
+    <div className={`border-l-4 pl-4 py-2.5 rounded-r-xl ${cls} hover:brightness-95 transition-all duration-150`}>
       <div className="flex items-start justify-between">
         <div>
           <span className="font-semibold text-slate-800 text-sm">{eventTypeLabel(event.event_type)}</span>
-          <span className="text-slate-500 text-xs ml-2">by {event.performed_by}</span>
+          <span className="text-slate-500 text-xs ml-2 font-medium">by {event.performed_by}</span>
         </div>
         <span className="text-xs text-slate-400 whitespace-nowrap ml-4 font-mono">
           {formatDateTime(event.performed_at)}
         </span>
       </div>
       {event.notes && (
-        <div className="text-xs text-slate-600 mt-0.5">{event.notes}</div>
+        <div className="text-xs text-slate-600 mt-0.5 leading-relaxed">{event.notes}</div>
       )}
     </div>
   );
@@ -251,22 +251,22 @@ export function ImpairmentPacket({ impairmentId, onBack }: Props) {
   const timelinePoints = buildTimelinePoints(data);
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div className="max-w-3xl mx-auto p-6 animate-fade-in-up">
       {/* Screen-only controls */}
       <div className="no-print flex items-center gap-3 mb-5">
-        <button onClick={onBack} className="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1">
+        <button onClick={onBack} className="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1.5 font-medium transition-colors hover:text-slate-900">
           ← Back to Dashboard
         </button>
         <button
           onClick={() => window.print()}
-          className="ml-auto px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition-colors font-medium"
+          className="ml-auto px-4 py-2 bg-slate-800 text-white rounded-xl text-sm hover:bg-slate-700 transition-all duration-200 font-semibold shadow-md hover:shadow-lg hover:scale-[1.02]"
         >
           Print / Export PDF
         </button>
       </div>
 
       {/* Packet document */}
-      <div className="border border-slate-300 rounded-xl overflow-hidden shadow-md print:border-0 print:shadow-none">
+      <div className="border border-slate-200/80 rounded-2xl overflow-hidden shadow-xl print:border-0 print:shadow-none">
 
         {/* Title bar — navy + amber brand */}
         <div className="bg-slate-900 text-white px-6 py-5">
@@ -308,8 +308,8 @@ export function ImpairmentPacket({ impairmentId, onBack }: Props) {
 
           {/* RESOLUTION REQUIRED — only for active impairments with violations */}
           {isBroken && data.status !== "closed" && data.status !== "closed_incomplete" && (
-            <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4">
-              <div className="text-sm font-bold text-red-900 mb-3 uppercase tracking-wide">
+            <div className="bg-red-50/80 border-2 border-red-300/80 rounded-2xl p-5">
+              <div className="text-sm font-bold text-red-900 mb-3 uppercase tracking-widest">
                 &#9632; Resolution Required
               </div>
               <div className="space-y-3">
@@ -345,7 +345,7 @@ export function ImpairmentPacket({ impairmentId, onBack }: Props) {
           )}
 
           {/* Property & System */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm animate-fade-in stagger-1">
             <div>
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Property</div>
               <div className="font-semibold text-slate-900">{data.property.name}</div>
@@ -371,7 +371,7 @@ export function ImpairmentPacket({ impairmentId, onBack }: Props) {
           <hr className="border-slate-200" />
 
           {/* Visual Timeline */}
-          <div>
+          <div className="animate-fade-in stagger-2">
             <div className="flex items-center justify-between mb-4">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Timeline</div>
               <div className="text-xs text-slate-500 font-medium">Total duration: {data.duration_str}</div>
@@ -382,34 +382,34 @@ export function ImpairmentPacket({ impairmentId, onBack }: Props) {
           <hr className="border-slate-200" />
 
           {/* Compliance Checklist */}
-          <div>
+          <div className="animate-fade-in stagger-3">
             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
               Compliance Check
             </div>
-            <div className="space-y-0">
+            <div className="rounded-xl overflow-hidden border border-slate-100">
               {data.compliance_items.map((item, i) => (
-                <div key={i} className="flex items-start gap-3 text-sm py-2 border-b border-slate-100 last:border-0">
+                <div key={i} className={`flex items-start gap-3 text-sm px-4 py-3 border-b border-slate-100 last:border-0 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/60"} hover:bg-slate-50 transition-colors duration-100`}>
                   <ComplianceIcon status={item.status} />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-medium ${item.status === "missing" ? "text-red-800" : "text-slate-800"}`}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`font-semibold ${item.status === "missing" ? "text-red-800" : "text-slate-800"}`}>
                         {item.label}
                       </span>
                       <StatusBadge status={item.status} />
                     </div>
-                    <div className="text-xs text-slate-500">{item.detail}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{item.detail}</div>
                   </div>
-                  <div className="text-xs text-slate-400 whitespace-nowrap">{item.condition}</div>
+                  <div className="text-xs text-slate-400 whitespace-nowrap font-medium">{item.condition}</div>
                 </div>
               ))}
             </div>
 
             {data.compliance_violations.length > 0 && (
-              <div className="mt-4 bg-red-50 border border-red-300 rounded-lg p-3">
-                <div className="text-sm font-bold text-red-800 mb-1">Active Violations:</div>
+              <div className="mt-4 bg-red-50/80 border border-red-200/60 rounded-2xl p-4">
+                <div className="text-sm font-bold text-red-800 mb-1.5 uppercase tracking-wide">Active Violations:</div>
                 {data.compliance_violations.map((v, i) => (
-                  <div key={i} className="text-sm text-red-700 flex items-start gap-1">
-                    <span className="font-bold">&#10007;</span>
+                  <div key={i} className="text-sm text-red-700 flex items-start gap-1.5 mt-1">
+                    <span className="font-bold flex-shrink-0">&#10007;</span>
                     {v.message}
                   </div>
                 ))}
@@ -420,7 +420,7 @@ export function ImpairmentPacket({ impairmentId, onBack }: Props) {
           <hr className="border-slate-200" />
 
           {/* Event Log */}
-          <div>
+          <div className="animate-fade-in stagger-4">
             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
               Event Log — Immutable Audit Trail ({data.events.length} entries)
             </div>
@@ -443,7 +443,7 @@ export function ImpairmentPacket({ impairmentId, onBack }: Props) {
                   <div className="mb-2 text-xs text-red-600">{noteError}</div>
                 )}
                 <textarea
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm mb-2"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-slate-300 bg-white/80 backdrop-blur resize-none"
                   rows={2}
                   value={noteText}
                   onChange={e => setNoteText(e.target.value)}
@@ -451,7 +451,7 @@ export function ImpairmentPacket({ impairmentId, onBack }: Props) {
                 />
                 <div className="flex gap-3 items-center">
                   <input
-                    className="flex-1 border border-slate-300 rounded px-3 py-2 text-sm"
+                    className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 bg-white/80"
                     value={noteBy}
                     onChange={e => setNoteBy(e.target.value)}
                     placeholder="Your name"
@@ -459,7 +459,7 @@ export function ImpairmentPacket({ impairmentId, onBack }: Props) {
                   <button
                     onClick={handleAddNote}
                     disabled={noteSubmitting}
-                    className="px-4 py-2 bg-slate-700 text-white rounded text-sm hover:bg-slate-800 font-medium disabled:opacity-50"
+                    className="px-5 py-2.5 bg-slate-700 text-white rounded-xl text-sm hover:bg-slate-800 font-semibold disabled:opacity-50 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02]"
                   >
                     {noteSubmitting ? "Saving..." : "Add Note"}
                   </button>

@@ -97,13 +97,14 @@ function StatCard({
   sub?: string;
   accent: "red" | "amber" | "green" | "slate";
 }) {
-  const borderColor = { red: "border-red-500", amber: "border-amber-500", green: "border-green-500", slate: "border-slate-300" }[accent];
-  const valueColor = { red: "text-red-600", amber: "text-amber-600", green: "text-green-600", slate: "text-slate-500" }[accent];
+  const borderColor = { red: "border-red-500", amber: "border-amber-500", green: "border-emerald-500", slate: "border-slate-300" }[accent];
+  const valueColor = { red: "text-red-500", amber: "text-amber-500", green: "text-emerald-500", slate: "text-slate-400" }[accent];
+  const glowColor = { red: "shadow-red-500/10", amber: "shadow-amber-500/10", green: "shadow-emerald-500/10", slate: "shadow-slate-500/5" }[accent];
   return (
-    <div className={`bg-white rounded-lg border-l-4 ${borderColor} px-5 py-4 shadow-sm`}>
-      <div className={`text-3xl font-bold ${valueColor}`}>{value}</div>
-      <div className="text-sm font-semibold text-slate-700 mt-0.5">{label}</div>
-      {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
+    <div className={`bg-white/80 backdrop-blur rounded-2xl border-l-4 ${borderColor} px-5 py-4 shadow-xl ${glowColor} hover:scale-[1.02] hover:shadow-2xl transition-all duration-200 border border-white/60`}>
+      <div className={`text-3xl font-bold tracking-tight ${valueColor}`}>{value}</div>
+      <div className="text-sm font-semibold text-slate-700 mt-1 leading-tight">{label}</div>
+      {sub && <div className="text-xs text-slate-400 mt-0.5 font-medium">{sub}</div>}
     </div>
   );
 }
@@ -111,16 +112,19 @@ function StatCard({
 function AlertBanner({ alerts }: { alerts: ComplianceAlert[] }) {
   if (alerts.length === 0) return null;
   return (
-    <div className="bg-red-50 border border-red-300 rounded-lg p-4 mb-6">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-red-600 font-bold text-sm">⚠ COMPLIANCE ALERTS ({alerts.length})</span>
+    <div className="bg-red-500/8 border border-red-400/30 rounded-2xl p-5 mb-6 shadow-lg shadow-red-500/5 backdrop-blur">
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+          <span className="text-white font-bold text-xs">!</span>
+        </div>
+        <span className="text-red-700 font-bold text-sm tracking-wide uppercase">Compliance Alerts ({alerts.length})</span>
       </div>
-      <ul className="space-y-1">
+      <ul className="space-y-1.5">
         {alerts.map((a, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm text-red-800">
-            <span className="mt-0.5 text-red-500">&#9632;</span>
+          <li key={i} className="flex items-start gap-2 text-sm text-red-800 bg-red-50/80 rounded-xl px-3 py-2">
+            <span className="mt-0.5 text-red-400 flex-shrink-0">&#9632;</span>
             <span>
-              <strong>{a.property_name}</strong>: {a.message}
+              <strong className="font-semibold">{a.property_name}</strong>: {a.message}
             </span>
           </li>
         ))}
@@ -210,10 +214,10 @@ function DashIcon() {
 
 function JurisdictionChip({ jur }: { jur: Impairment["system"]["property"]["jurisdiction"] }) {
   return (
-    <div className="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded px-2 py-0.5 text-xs text-slate-600">
-      <span className="font-mono font-bold">NFPA {jur.nfpa25_edition}</span>
-      <span className="text-slate-400">|</span>
-      <span>{jur.name}</span>
+    <div className="inline-flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/80 rounded-full px-3 py-0.5 text-xs text-slate-600 shadow-sm">
+      <span className="font-mono font-bold text-slate-700">NFPA {jur.nfpa25_edition}</span>
+      <span className="text-slate-300">|</span>
+      <span className="font-medium">{jur.name}</span>
       {jur.notification_threshold_hours === 0 ? (
         <span className="text-red-600 font-bold ml-0.5">ALL impairments require AHJ</span>
       ) : (
@@ -256,42 +260,42 @@ function ActiveCard({ imp, onTakeAction, onViewPacket }: { imp: Impairment; onTa
     : null;
 
   return (
-    <div className={`rounded-lg border overflow-hidden shadow-sm ${isBlocked ? "border-red-300" : "border-amber-300"}`}>
-      <div className={`h-1 ${isBlocked ? "bg-red-500" : "bg-amber-500"}`} />
-      <div className={`p-4 ${isBlocked ? "bg-red-50" : "bg-amber-50"}`}>
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="font-semibold text-slate-900">
+    <div className={`rounded-2xl border overflow-hidden shadow-lg hover:shadow-xl transition-all duration-200 ${isBlocked ? "border-red-300/60 shadow-red-500/5" : "border-amber-300/60 shadow-amber-500/5"}`}>
+      <div className={`h-1 ${isBlocked ? "bg-gradient-to-r from-red-600 to-red-400" : "bg-gradient-to-r from-amber-500 to-amber-400"}`} />
+      <div className={`p-6 ${isBlocked ? "bg-red-50/70" : "bg-amber-50/60"}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-slate-900 text-base tracking-tight">
               {imp.system.property.name} — {imp.system.zone || systemTypeLabel(imp.system.system_type)}
             </div>
             <div className="text-sm text-slate-600 mt-0.5">{imp.reason}</div>
-            <div className="text-xs text-slate-500 mt-1 flex items-center gap-3">
+            <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-3 flex-wrap">
               <span>Opened: {formatDateTime(imp.opened_at)} by {imp.opened_by}</span>
-              <span className="text-slate-400">|</span>
+              <span className="text-slate-300">|</span>
               <span className="text-slate-700 font-semibold">
                 Elapsed: <LiveElapsed since={imp.opened_at} />
               </span>
             </div>
-            <div className="mt-1.5">
+            <div className="mt-2">
               <JurisdictionChip jur={jur} />
             </div>
           </div>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(imp.status)}`}>
+          <span className={`text-xs px-3 py-1 rounded-full font-semibold ring-1 ring-inset flex-shrink-0 ${statusColor(imp.status)}`}>
             {statusLabel(imp.status)}
           </span>
         </div>
 
         {isBlocked && (
-          <div className="mt-3 mb-1">
-            <div className="bg-red-700 text-white px-3 py-1.5 rounded font-bold text-sm inline-flex items-center gap-2">
+          <div className="mt-4 mb-1">
+            <div className="bg-red-700 text-white px-4 py-2 rounded-xl font-bold text-sm inline-flex items-center gap-2 animate-pulse-red shadow-md">
               <span>&#9608;&#9608;</span>
               BLOCKED: Cannot close — {violations.length} violation{violations.length > 1 ? "s" : ""}
               <span>&#9608;&#9608;</span>
             </div>
-            <ul className="mt-2 space-y-1.5">
+            <ul className="mt-2.5 space-y-2">
               {violations.map((v, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-red-800 font-semibold bg-white/60 rounded px-2 py-1.5 border border-red-200">
-                  <span className="text-red-600 mt-0.5 flex-shrink-0">&#10007;</span>
+                <li key={i} className="flex items-start gap-2.5 text-sm text-red-800 font-semibold bg-white/70 backdrop-blur rounded-xl px-3 py-2.5 border border-red-200/60 shadow-sm">
+                  <span className="text-red-500 mt-0.5 flex-shrink-0">&#10007;</span>
                   <div className="flex-1">
                     <div>{v.message}</div>
                     <div className="flex items-center gap-2 mt-0.5">
@@ -311,7 +315,7 @@ function ActiveCard({ imp, onTakeAction, onViewPacket }: { imp: Impairment; onTa
         )}
 
         {!isBlocked && ahjCompliant && ahjNotifiedMinutes !== null && (
-          <div className="mt-2 text-sm text-green-700 font-semibold flex items-center gap-1">
+          <div className="mt-3 text-sm text-emerald-700 font-semibold flex items-center gap-1.5 bg-emerald-50/80 rounded-xl px-3 py-2">
             <CheckIcon /> AHJ notified within {ahjNotifiedMinutes} min — {jur.local_code_ref || "jurisdiction deadline"}
           </div>
         )}
@@ -321,45 +325,45 @@ function ActiveCard({ imp, onTakeAction, onViewPacket }: { imp: Impairment; onTa
         {(() => {
           const nextAction = (() => {
             if (!imp.ahj_notified && jur.ahj_notification_required)
-              return { label: "Notify AHJ →", cls: "bg-red-600 text-white hover:bg-red-700" };
+              return { label: "Notify AHJ →", cls: "bg-red-600 text-white hover:bg-red-700 shadow-red-600/20" };
             if (!imp.fire_watch_started_at)
-              return { label: "Start Fire Watch →", cls: "bg-amber-600 text-white hover:bg-amber-700" };
+              return { label: "Start Fire Watch →", cls: "bg-amber-500 text-slate-900 hover:bg-amber-400 shadow-amber-500/20" };
             if (!imp.restored_at)
-              return { label: "Record Restoration →", cls: "bg-slate-700 text-white hover:bg-slate-800" };
-            return { label: "Complete & Close →", cls: "bg-green-600 text-white hover:bg-green-700" };
+              return { label: "Record Restoration →", cls: "bg-slate-700 text-white hover:bg-slate-800 shadow-slate-700/20" };
+            return { label: "Complete & Close →", cls: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-600/20" };
           })();
           return (
-        <div className="flex gap-2 mt-3 flex-wrap items-center">
+        <div className="flex gap-2 mt-4 flex-wrap items-center">
           <button
             onClick={() => onTakeAction(imp)}
-            className={`px-3 py-1.5 text-xs rounded-md font-semibold transition-colors ${nextAction.cls}`}
+            className={`px-4 py-1.5 text-xs rounded-lg font-semibold transition-all duration-200 shadow-md hover:scale-[1.03] ${nextAction.cls}`}
           >
             {nextAction.label}
           </button>
           <button
             onClick={() => onViewPacket(imp.id)}
-            className="px-3 py-1.5 text-xs border border-slate-400 text-slate-700 rounded-md hover:bg-slate-100 transition-colors"
+            className="px-4 py-1.5 text-xs border border-slate-300/80 text-slate-600 rounded-lg hover:bg-white/80 hover:border-slate-400 hover:shadow-sm transition-all duration-200 font-medium"
           >
             View Packet
           </button>
           <button
             onClick={() => setShowNote(v => !v)}
-            className="px-3 py-1.5 text-xs border border-slate-300 text-slate-500 rounded-md hover:bg-slate-50 transition-colors"
+            className="px-4 py-1.5 text-xs border border-slate-200 text-slate-500 rounded-lg hover:bg-white/60 hover:border-slate-300 transition-all duration-200 font-medium"
           >
             + Note
           </button>
           {noteConfirm && (
-            <span className="text-xs text-green-700 font-semibold">{noteConfirm}</span>
+            <span className="text-xs text-emerald-700 font-semibold">{noteConfirm}</span>
           )}
         </div>
           );
         })()}
 
         {showNote && (
-          <div className="mt-2 flex gap-2 items-start">
+          <div className="mt-3 flex gap-2 items-start">
             <textarea
               autoFocus
-              className="flex-1 border border-slate-300 rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-slate-400"
+              className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-slate-300 bg-white/80 backdrop-blur"
               rows={2}
               placeholder="Log an observation, status update, or action taken..."
               value={noteText}
@@ -370,13 +374,13 @@ function ActiveCard({ imp, onTakeAction, onViewPacket }: { imp: Impairment; onTa
               <button
                 onClick={saveNote}
                 disabled={noteSaving || !noteText.trim()}
-                className="px-3 py-1.5 text-xs bg-slate-700 text-white rounded hover:bg-slate-800 disabled:opacity-40 font-semibold"
+                className="px-3 py-1.5 text-xs bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-40 font-semibold transition-colors"
               >
                 {noteSaving ? "..." : "Save"}
               </button>
               <button
                 onClick={() => { setShowNote(false); setNoteText(""); }}
-                className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700"
+                className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
               >
                 Cancel
               </button>
@@ -391,33 +395,33 @@ function ActiveCard({ imp, onTakeAction, onViewPacket }: { imp: Impairment; onTa
 function ClosedCard({ imp, onViewPacket }: { imp: Impairment; onViewPacket: (id: number) => void }) {
   const isIncomplete = imp.status === "closed_incomplete";
   return (
-    <div className={`rounded-lg border overflow-hidden shadow-sm ${isIncomplete ? "border-yellow-300" : "border-slate-200 bg-white"}`}>
-      <div className={`h-1 ${isIncomplete ? "bg-yellow-400" : "bg-green-500"}`} />
-      <div className={`p-4 ${isIncomplete ? "bg-yellow-50" : "bg-white"}`}>
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="font-semibold text-slate-900">
+    <div className={`rounded-2xl border overflow-hidden shadow-md hover:shadow-lg transition-all duration-200 ${isIncomplete ? "border-yellow-300/60" : "border-slate-200/80"}`}>
+      <div className={`h-1 ${isIncomplete ? "bg-gradient-to-r from-yellow-500 to-yellow-400" : "bg-gradient-to-r from-emerald-600 to-emerald-400"}`} />
+      <div className={`p-6 ${isIncomplete ? "bg-yellow-50/60" : "bg-white/80 backdrop-blur"}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-slate-900 tracking-tight">
               {imp.system.property.name} — {imp.system.zone || systemTypeLabel(imp.system.system_type)}
             </div>
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-slate-500 mt-0.5">
               Duration: {durationStr(imp.opened_at, imp.closed_at ?? undefined)}
               {isIncomplete ? " · Closed without full compliance" : " · All steps complete"}
             </div>
             {isIncomplete && imp.closure_notes && (
               <div className="text-xs text-yellow-800 mt-0.5 italic">{imp.closure_notes}</div>
             )}
-            <div className="text-xs text-slate-400 mt-0.5">
+            <div className="text-xs text-slate-400 mt-1 font-medium">
               Closed: {formatDateTime(imp.closed_at)} by {imp.closed_by || "—"}
             </div>
           </div>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(imp.status)}`}>
+          <span className={`text-xs px-3 py-1 rounded-full font-semibold ring-1 ring-inset flex-shrink-0 ${statusColor(imp.status)}`}>
             {statusLabel(imp.status)}
           </span>
         </div>
-        <div className="mt-3">
+        <div className="mt-4">
           <button
             onClick={() => onViewPacket(imp.id)}
-            className="px-3 py-1.5 text-xs bg-slate-700 text-white rounded-md hover:bg-slate-800 transition-colors"
+            className="px-4 py-1.5 text-xs bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-all duration-200 font-semibold shadow-sm hover:shadow-md hover:scale-[1.02]"
           >
             View Audit Packet →
           </button>
@@ -429,37 +433,37 @@ function ClosedCard({ imp, onViewPacket }: { imp: Impairment; onViewPacket: (id:
 
 function HeroBanner({ onDismiss }: { onDismiss: () => void }) {
   return (
-    <div className="mb-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
-      <div className="px-6 py-5 flex items-start gap-5">
+    <div className="mb-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl border border-slate-700/60 overflow-hidden shadow-2xl">
+      <div className="px-7 py-6 flex items-start gap-5">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-7 h-7 bg-amber-500 rounded-md flex items-center justify-center text-sm flex-shrink-0">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 bg-amber-500 rounded-xl flex items-center justify-center text-base flex-shrink-0 shadow-lg shadow-amber-500/30">
               🔥
             </div>
-            <h2 className="text-lg font-bold text-white">Welcome to ImpairmentOS</h2>
+            <h2 className="text-xl font-bold text-white tracking-tight">Welcome to ImpairmentOS</h2>
           </div>
-          <p className="text-slate-300 text-sm leading-relaxed mb-3">
+          <p className="text-slate-300 text-sm leading-relaxed mb-4">
             The impairment management workflow that produces audit-ready records the moment a fire protection system goes offline.
             Every jurisdiction's rules enforced. Every step timestamped. Every packet complete before it leaves the truck.
           </p>
           <div className="flex flex-wrap gap-4 text-xs text-slate-400">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+              <span className="w-2 h-2 rounded-full bg-red-500 shadow-sm shadow-red-500/50"></span>
               <span>Jurisdiction-aware compliance enforcement</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>
               <span>Real-time state machine guards</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>
               <span>Audit-ready packets on close</span>
             </div>
           </div>
         </div>
         <button
           onClick={onDismiss}
-          className="text-slate-500 hover:text-slate-300 text-sm flex-shrink-0 mt-1"
+          className="text-slate-600 hover:text-slate-300 text-sm flex-shrink-0 mt-1 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-700/50 transition-colors"
           title="Dismiss"
         >
           ✕
@@ -505,8 +509,16 @@ export function Dashboard({ onViewPacket, onTakeAction, filterPropertyId }: Prop
   }, []);
 
   if (loading) return (
-    <div className="max-w-5xl mx-auto px-6 py-16 text-center text-slate-500">
-      Loading dashboard...
+    <div className="max-w-5xl mx-auto px-6 py-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="animate-pulse bg-slate-200/80 rounded-2xl h-24" />
+        ))}
+      </div>
+      <div className="space-y-3">
+        <div className="animate-pulse bg-slate-200/80 rounded-2xl h-32" />
+        <div className="animate-pulse bg-slate-200/80 rounded-2xl h-32" />
+      </div>
     </div>
   );
   if (error) return <div className="p-8 text-red-600">Error: {error}</div>;
@@ -514,42 +526,52 @@ export function Dashboard({ onViewPacket, onTakeAction, filterPropertyId }: Prop
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-6">
-      {showHero && <HeroBanner onDismiss={dismissHero} />}
+      {showHero && <div className="animate-fade-in"><HeroBanner onDismiss={dismissHero} /></div>}
       {/* Stat cards */}
       {(() => {
         const blockedCount = data.active_impairments.filter(i => computeViolations(i).length > 0).length;
         return (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">
-            <StatCard
-              label="Active Impairments"
-              value={data.active_impairments.length}
-              sub={data.active_impairments.length > 0 ? "requires action" : "all clear"}
-              accent={data.active_impairments.length > 0 ? "red" : "slate"}
-            />
-            <StatCard
-              label="Blocked Closures"
-              value={blockedCount}
-              sub="compliance violations"
-              accent={blockedCount > 0 ? "red" : "slate"}
-            />
-            <StatCard
-              label="Compliance Alerts"
-              value={data.compliance_alerts.length}
-              sub={data.compliance_alerts.length > 0 ? "immediate action" : "no violations"}
-              accent={data.compliance_alerts.length > 0 ? "amber" : "slate"}
-            />
-            <StatCard
-              label="Closed (90 days)"
-              value={data.recently_closed.length}
-              sub="with audit packets"
-              accent="green"
-            />
-            <StatCard
-              label="Avg Resolution"
-              value={avgDuration(data.recently_closed)}
-              sub="mean closure time"
-              accent="slate"
-            />
+            <div className="animate-fade-in-up stagger-1">
+              <StatCard
+                label="Active Impairments"
+                value={data.active_impairments.length}
+                sub={data.active_impairments.length > 0 ? "requires action" : "all clear"}
+                accent={data.active_impairments.length > 0 ? "red" : "slate"}
+              />
+            </div>
+            <div className="animate-fade-in-up stagger-2">
+              <StatCard
+                label="Blocked Closures"
+                value={blockedCount}
+                sub="compliance violations"
+                accent={blockedCount > 0 ? "red" : "slate"}
+              />
+            </div>
+            <div className="animate-fade-in-up stagger-3">
+              <StatCard
+                label="Compliance Alerts"
+                value={data.compliance_alerts.length}
+                sub={data.compliance_alerts.length > 0 ? "immediate action" : "no violations"}
+                accent={data.compliance_alerts.length > 0 ? "amber" : "slate"}
+              />
+            </div>
+            <div className="animate-fade-in-up stagger-4">
+              <StatCard
+                label="Closed (90 days)"
+                value={data.recently_closed.length}
+                sub="with audit packets"
+                accent="green"
+              />
+            </div>
+            <div className="animate-fade-in-up stagger-5">
+              <StatCard
+                label="Avg Resolution"
+                value={avgDuration(data.recently_closed)}
+                sub="mean closure time"
+                accent="slate"
+              />
+            </div>
           </div>
         );
       })()}
@@ -579,11 +601,11 @@ export function Dashboard({ onViewPacket, onTakeAction, filterPropertyId }: Prop
           <>
             <div className="flex items-center justify-between mb-5 gap-3">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-500 font-medium">Filter:</label>
+                <label className="text-xs text-slate-500 font-semibold">Filter:</label>
                 <select
                   value={selectedPropertyId}
                   onChange={e => setSelectedPropertyId(e.target.value === "all" ? "all" : Number(e.target.value))}
-                  className="text-xs border border-slate-300 rounded px-2 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                  className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300 bg-white/80 shadow-sm font-medium"
                 >
                   <option value="all">All Properties</option>
                   {allProps.map(([id, name]) => (
@@ -593,7 +615,7 @@ export function Dashboard({ onViewPacket, onTakeAction, filterPropertyId }: Prop
                 {selectedPropertyId !== "all" && (
                   <button
                     onClick={() => setSelectedPropertyId("all")}
-                    className="text-xs text-slate-400 hover:text-slate-700"
+                    className="text-xs text-slate-400 hover:text-slate-700 transition-colors px-1.5 py-0.5 rounded hover:bg-slate-100"
                   >
                     ✕ Clear
                   </button>
@@ -601,13 +623,13 @@ export function Dashboard({ onViewPacket, onTakeAction, filterPropertyId }: Prop
               </div>
               <div className="flex items-center gap-2">
                 {lastRefresh && (
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-slate-400 font-medium">
                     Auto-refreshes every 30s
                   </span>
                 )}
                 <button
                   onClick={() => load()}
-                  className="px-3 py-1.5 text-xs border border-slate-300 text-slate-600 rounded hover:bg-slate-50 transition-colors"
+                  className="px-3 py-1.5 text-xs border border-slate-200 text-slate-600 rounded-lg hover:bg-white/80 hover:border-slate-300 hover:shadow-sm transition-all duration-200 font-medium bg-white/60"
                 >
                   ↺ Refresh
                 </button>
@@ -617,37 +639,41 @@ export function Dashboard({ onViewPacket, onTakeAction, filterPropertyId }: Prop
             <AlertBanner alerts={filteredAlerts} />
 
             <section className="mb-8">
-              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-500 inline-block shadow-sm shadow-red-500/50"></span>
                 Active Impairments ({filteredActive.length})
               </h2>
               {filteredActive.length === 0 ? (
-                <div className="rounded-lg border border-slate-200 bg-white p-8 text-center">
-                  <div className="text-2xl mb-2">✓</div>
-                  <div className="text-slate-400 text-sm">No active impairments</div>
+                <div className="rounded-2xl border border-slate-200/80 bg-white/70 backdrop-blur p-10 text-center shadow-sm">
+                  <div className="text-3xl mb-2 opacity-70">✓</div>
+                  <div className="text-slate-400 text-sm font-medium">No active impairments</div>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {filteredActive.map(imp => (
-                    <ActiveCard key={imp.id} imp={imp} onTakeAction={onTakeAction} onViewPacket={onViewPacket} />
+                    <div key={imp.id} className="animate-fade-in-up">
+                      <ActiveCard imp={imp} onTakeAction={onTakeAction} onViewPacket={onViewPacket} />
+                    </div>
                   ))}
                 </div>
               )}
             </section>
 
             <section>
-              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-sm shadow-emerald-500/50"></span>
                 Recently Closed — Last 90 Days ({filteredClosed.length})
               </h2>
               {filteredClosed.length === 0 ? (
-                <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-400 text-sm">
+                <div className="rounded-2xl border border-slate-200/80 bg-white/70 backdrop-blur p-10 text-center text-slate-400 text-sm font-medium shadow-sm">
                   No recently closed impairments
                 </div>
               ) : (
                 <div className="space-y-3">
                   {filteredClosed.map(imp => (
-                    <ClosedCard key={imp.id} imp={imp} onViewPacket={onViewPacket} />
+                    <div key={imp.id} className="animate-fade-in-up">
+                      <ClosedCard imp={imp} onViewPacket={onViewPacket} />
+                    </div>
                   ))}
                 </div>
               )}
